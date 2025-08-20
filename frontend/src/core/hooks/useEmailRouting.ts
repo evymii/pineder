@@ -1,6 +1,5 @@
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/router";
-import { useEffect } from "react";
 
 export type UserRole = "student" | "mentor" | "other";
 

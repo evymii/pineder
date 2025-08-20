@@ -13,6 +13,7 @@ import {
 } from "../../design/system/card";
 import { Button } from "../../design/system/button";
 import { Badge } from "../../design/system/badge";
+import { TopicSubmissionForm } from "../../components/features/group-sessions/TopicSubmissionForm";
 import {
   BookOpen,
   Plus,
@@ -46,6 +47,7 @@ interface Topic {
 
 export default function StudentDashboard() {
   const { isDarkMode, colors } = useTheme();
+  const [showTopicForm, setShowTopicForm] = useState(false);
   const [topics, setTopics] = useState<Topic[]>([
     {
       id: 1,
@@ -152,6 +154,24 @@ export default function StudentDashboard() {
     };
 
     return isDarkMode ? colorScheme.dark : colorScheme.light;
+  };
+
+  const handleTopicSubmit = (newTopic: any) => {
+    // Convert the new topic to match our Topic interface
+    const topic: Topic = {
+      id: Date.now(),
+      title: newTopic.topic,
+      description: newTopic.description,
+      category: newTopic.category,
+      votes: 0,
+      participants: 0,
+      suggestedBy: "You",
+      suggestedDate: "Just now",
+      isVoted: false,
+    };
+
+    // Add the new topic to the beginning of the list
+    setTopics((prevTopics) => [topic, ...prevTopics]);
   };
 
   return (
@@ -338,7 +358,11 @@ export default function StudentDashboard() {
                 ))}
               </div>
               <div className="mt-6 text-center">
-                <Button variant="outline" className="w-full max-w-xs">
+                <Button 
+                  variant="outline" 
+                  className="w-full max-w-xs"
+                  onClick={() => setShowTopicForm(true)}
+                >
                   <Plus className="w-4 h-4 mr-2" />
                   Suggest New Topic
                 </Button>
@@ -347,6 +371,13 @@ export default function StudentDashboard() {
           </Card>
         </div>
       </div>
+
+      {/* Topic Submission Form */}
+      <TopicSubmissionForm
+        isOpen={showTopicForm}
+        onClose={() => setShowTopicForm(false)}
+        onSubmit={handleTopicSubmit}
+      />
 
       <Footer />
     </div>

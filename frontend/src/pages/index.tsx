@@ -1,5 +1,6 @@
 import Head from "next/head";
 import Link from "next/link";
+import { useState } from "react";
 import { PageLayout } from "../components/layout";
 import { useTheme } from "../core/contexts/ThemeContext";
 import { PostSignInRedirect } from "../components/features/auth/PostSignInRedirect";
@@ -15,9 +16,12 @@ import {
   TrendingUp,
   Lightbulb,
   BookOpen,
+  Plus,
 } from "lucide-react";
 import { mentorCategories } from "../core/lib/data/mentors";
 import { TeacherCategory } from "../components/features/mentors/TeacherCategory";
+import { EventSubmissionForm } from "../components/features/events/EventSubmissionForm";
+import { Button } from "../design/system/button";
 
 export default function Home() {
   const { colors, isDarkMode } = useTheme();
@@ -89,6 +93,22 @@ export default function Home() {
       status: "Almost Full",
     },
   ];
+
+  // State for event form
+  const [showEventForm, setShowEventForm] = useState(false);
+  const [events, setEvents] = useState(todaysEvents);
+
+  // Handler for event submission
+  const handleEventSubmit = (newEvent: any) => {
+    const event = {
+      ...newEvent,
+      id: Date.now(),
+      participants: 0,
+      status: "Open" as const,
+    };
+
+    setEvents((prevEvents: any[]) => [event, ...prevEvents]);
+  };
 
   return (
     <PageLayout>
@@ -292,20 +312,6 @@ export default function Home() {
               </div>
             ))}
           </div>
-
-          <div className="text-center mt-12">
-            <Link
-              href="/community/suggestions"
-              className="inline-flex items-center px-8 py-4 text-lg font-medium transition-all duration-300 rounded-xl hover:scale-105"
-              style={{
-                backgroundColor: colors.accent.secondary,
-                color: colors.text.inverse,
-              }}
-            >
-              Explore All Topics
-              <ArrowRight className="w-5 h-5 ml-2" />
-            </Link>
-          </div>
         </div>
       </section>
 
@@ -352,7 +358,7 @@ export default function Home() {
           </div>
 
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-            {todaysEvents.map((event) => (
+            {events.map((event) => (
               <div
                 key={event.id}
                 className="group relative overflow-hidden rounded-2xl transition-all duration-300 hover:scale-105"
@@ -450,6 +456,21 @@ export default function Home() {
             ))}
           </div>
 
+          {/* Add Event Button */}
+          <div className="text-center mt-8">
+            <Button
+              onClick={() => setShowEventForm(true)}
+              className="inline-flex items-center px-8 py-4 text-lg font-medium transition-all duration-300 rounded-xl hover:scale-105 shadow-lg hover:shadow-xl"
+              style={{
+                background: `linear-gradient(135deg, ${colors.accent.secondary}, ${colors.accent.success})`,
+                color: colors.text.inverse,
+              }}
+            >
+              <Plus className="w-5 h-5 mr-2" />
+              Add New Event
+            </Button>
+          </div>
+
           <div className="text-center mt-12">
             <Link
               href="/community/events"
@@ -466,6 +487,13 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Event Submission Form */}
+      <EventSubmissionForm
+        isOpen={showEventForm}
+        onClose={() => setShowEventForm(false)}
+        onSubmit={handleEventSubmit}
+      />
     </PageLayout>
   );
 }

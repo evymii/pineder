@@ -1,49 +1,94 @@
-# Backend API - MVC Architecture
+# Backend API for Pineder
 
-Simple Express.js backend with MVC (Model-View-Controller) structure.
+This is the backend API server for the Pineder mentoring platform, built with Express.js, TypeScript, and MongoDB.
 
-## Structure
+## 🚀 Quick Start
 
+### Prerequisites
+
+- Node.js (v16 or higher)
+- MongoDB running locally or accessible via connection string
+
+### Installation
+
+```bash
+cd backend
+npm install
 ```
-src/
-├── config/          # Database configuration
-├── controllers/     # Business logic
-├── middleware/      # Authentication & validation
-├── models/          # Database schemas
-├── routes/          # API endpoints
-└── index.ts         # Main server file
+
+### Environment Setup
+
+Create a `.env` file in the backend directory:
+
+```env
+PORT=5555
+NODE_ENV=development
+MONGODB_URI=mongodb://localhost:27017/mentoring_platform
+ZOOM_API_KEY=your_zoom_api_key_here
+ZOOM_API_SECRET=your_zoom_api_secret_here
+ZOOM_ACCOUNT_ID=your_zoom_account_id_here
 ```
 
-## Quick Start
+### Running the Backend
 
-1. **Install dependencies:**
-   ```bash
-   npm install
-   ```
+```bash
+# Development mode with hot reload
+npm run dev
 
-2. **Set up environment:**
-   ```bash
-   cp env.example .env
-   # Edit .env with your MongoDB URI
-   ```
+# Production build
+npm run build
+npm start
+```
 
-3. **Run development server:**
-   ```bash
-   npm run dev
-   ```
+## 🔗 Frontend Integration
 
-## API Endpoints
+The backend is configured to work seamlessly with the Next.js frontend:
 
-- `GET /` - Welcome message
-- `GET /health` - Health check
-- `GET /api/users` - Get all users
-- `POST /api/users` - Create new user
+- **API Base URL**: `http://localhost:5555`
+- **CORS**: Configured to allow frontend at `http://localhost:3000`
+- **Health Check**: Available at `/health`
 
-## Features
+## 📡 API Endpoints
 
-- ✅ Express.js server
-- ✅ TypeScript support
-- ✅ MVC architecture
-- ✅ MongoDB integration (optional)
-- ✅ CORS enabled
-- ✅ Environment configuration 
+### Core Routes
+
+- `/api/users` - User management
+- `/api/mentors` - Mentor profiles and search
+- `/api/students` - Student management
+- `/api/sessions` - 1-on-1 sessions
+- `/api/group-sessions` - Group session management
+- `/api/communities` - Community features
+- `/api/payments` - Payment processing
+
+### Health & Status
+
+- `/` - API info
+- `/health` - Health check
+
+## 🧪 Testing Connection
+
+Test if your backend is running:
+
+```bash
+node test-connection.js
+```
+
+## 🔧 Development
+
+The backend uses:
+
+- **Express.js** - Web framework
+- **TypeScript** - Type safety
+- **MongoDB** - Database (via Mongoose)
+- **CORS** - Cross-origin resource sharing
+- **dotenv** - Environment configuration
+
+## 📱 Frontend Connection
+
+Your frontend is already configured to connect to this backend via:
+
+- `frontend/src/core/lib/constants/index.ts` - API base URL
+- `frontend/src/core/lib/api/backendService.ts` - Backend service
+- `frontend/src/core/lib/api/index.ts` - API client
+
+The frontend will automatically connect to `http://localhost:5555` when you run both services.

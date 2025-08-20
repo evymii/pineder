@@ -14,7 +14,12 @@ import {
 } from "lucide-react";
 import { Mentor } from "../../../core/lib/data/mentors";
 import { Button } from "../../../design/system/button";
-import { Card, CardContent, CardHeader, CardTitle } from "../../../design/system/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../../../design/system/card";
 import { Avatar, AvatarFallback } from "../../../design/system/avatar";
 import { ImageWithFallback } from "../../common/figma/ImageWithFallback";
 import { useTheme } from "../../../core/contexts/ThemeContext";
@@ -41,7 +46,7 @@ export function SessionBookingDialog({
   onClose,
   onConfirm,
 }: SessionBookingDialogProps) {
-  const { isDarkMode } = useTheme();
+  const { isDarkMode, colors } = useTheme();
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [selectedTime, setSelectedTime] = useState<string>("");
   const [sessionType] = useState<"1on1" | "group">("1on1");
@@ -65,19 +70,6 @@ export function SessionBookingDialog({
     }
   };
 
-  const getAvailableDates = () => {
-    const dates = [];
-    const today = new Date();
-
-    for (let i = 0; i < 14; i++) {
-      const date = new Date(today);
-      date.setDate(today.getDate() + i);
-      dates.push(date);
-    }
-
-    return dates;
-  };
-
   const getAvailableTimes = () => {
     return [
       "09:00",
@@ -93,19 +85,6 @@ export function SessionBookingDialog({
     ];
   };
 
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString("en-US", {
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-    });
-  };
-
-  const isDateAvailable = (date: Date) => {
-    const dayOfWeek = date.getDay();
-    return dayOfWeek !== 0 && dayOfWeek !== 6;
-  };
-
   return (
     <AnimatePresence>
       {isOpen && (
@@ -116,97 +95,141 @@ export function SessionBookingDialog({
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md"
           onClick={onClose}
         >
+          {/* Simple theme-aware background */}
+          <div className="absolute inset-0 overflow-hidden">
+            <div
+              className="absolute inset-0"
+              style={{
+                backgroundColor: isDarkMode
+                  ? "rgba(0, 0, 0, 0.8)"
+                  : "rgba(0, 0, 0, 0.1)",
+              }}
+            ></div>
+          </div>
+
           <motion.div
-            initial={{ scale: 0.9, opacity: 0, y: 30 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.9, opacity: 0, y: 30 }}
+            initial={{ scale: 0.9, opacity: 0, y: 30, rotateX: -15 }}
+            animate={{ scale: 1, opacity: 1, y: 0, rotateX: 0 }}
+            exit={{ scale: 0.9, opacity: 0, y: 30, rotateX: -15 }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            className={`relative w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-3xl shadow-2xl transition-all duration-200 ${
-              isDarkMode
-                ? "bg-[#222222] border border-white/20"
-                : "bg-white border border-black/20"
-            }`}
+            className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-3xl shadow-2xl transition-all duration-200 border"
             onClick={(e) => e.stopPropagation()}
+            style={{
+              backgroundColor: isDarkMode
+                ? colors.background.secondary
+                : colors.background.primary,
+              borderColor: colors.border.primary,
+              boxShadow: isDarkMode
+                ? "0 25px 50px -12px rgba(0, 0, 0, 0.8)"
+                : "0 25px 50px -12px rgba(0, 0, 0, 0.15)",
+            }}
           >
-            {/* Close button */}
+            {/* Enhanced Close button with glow effect */}
             <Button
               variant="ghost"
               size="sm"
               onClick={onClose}
-              className={`absolute top-4 right-4 h-10 w-10 p-0 z-20 transition-colors duration-200 ${
-                isDarkMode
-                  ? "hover:bg-white/10 text-white"
-                  : "hover:bg-black/10 text-black"
-              }`}
+              className="absolute top-4 right-4 h-12 w-12 p-0 z-20 transition-all duration-200 rounded-full hover:scale-110"
+              style={{
+                color: colors.text.primary,
+                backgroundColor: colors.background.tertiary,
+                borderColor: colors.border.primary,
+              }}
             >
-              <X className="h-5 w-5" />
+              <X className="h-6 w-6" />
             </Button>
 
             <div className="p-8">
-              {/* Top Section - Teacher Profile and Information */}
+              {/* Top Section - Teacher Profile and Information with Enhanced Styling */}
               <div
                 className={`flex mb-8 border-b pb-8 transition-colors duration-200 ${
                   isDarkMode ? "border-white/20" : "border-gray-200"
                 }`}
               >
-                {/* Left side - Profile Picture */}
+                {/* Left side - Profile Picture with Enhanced Styling and Animations */}
                 <div className="w-52 flex-shrink-0">
-                  <div
-                    className={`w-full h-72 border-4 border-green-500/20 rounded-2xl overflow-hidden shadow-lg transition-colors duration-200 ${
-                      isDarkMode ? "bg-[#333333]" : "bg-gray-100"
-                    }`}
+                  <motion.div
+                    className="relative"
+                    whileHover={{ scale: 1.02 }}
+                    transition={{ duration: 0.3 }}
                   >
-                    <ImageWithFallback
-                      src={mentor.image}
-                      alt={mentor.name}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
+                    <div
+                      className="w-full h-72 border-4 rounded-2xl overflow-hidden shadow-2xl transition-all duration-200"
+                      style={{
+                        backgroundColor: colors.background.tertiary,
+                        borderColor: colors.border.primary,
+                      }}
+                    >
+                      <ImageWithFallback
+                        src={mentor.image}
+                        alt={mentor.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  </motion.div>
                 </div>
 
-                {/* Right side - Teacher Information */}
+                {/* Right side - Teacher Information with Enhanced Typography */}
                 <div className="flex-1 pl-8">
-                  {/* Teacher Name and Role */}
+                  {/* Teacher Name and Role with Enhanced Styling */}
                   <div className="mb-6">
-                    <h2
-                      className={`text-3xl font-bold mb-2 transition-colors duration-200 ${
-                        isDarkMode ? "text-white" : "text-black"
+                    <motion.h2
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.6, delay: 0.2 }}
+                      className={`text-3xl font-bold mb-2 transition-colors duration-200 bg-gradient-to-r bg-clip-text ${
+                        isDarkMode
+                          ? "text-transparent bg-gradient-to-r from-white via-gray-100 to-gray-300"
+                          : "text-transparent bg-gradient-to-r from-gray-900 via-gray-800 to-gray-700"
                       }`}
                     >
                       {mentor.name}
-                    </h2>
-                    <p
+                    </motion.h2>
+                    <motion.p
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.6, delay: 0.3 }}
                       className={`text-lg transition-colors duration-200 ${
                         isDarkMode ? "text-gray-300" : "text-gray-600"
                       }`}
                     >
                       {mentor.role} at {mentor.company}
-                    </p>
+                    </motion.p>
                   </div>
 
-                  {/* Rating/Stars */}
-                  <div className="mb-6">
+                  {/* Rating/Stars with Enhanced Styling and Animations */}
+                  <motion.div
+                    className="mb-6"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, delay: 0.4 }}
+                  >
                     <div className="flex items-center space-x-2">
-                      <Star className="w-6 h-6 text-yellow-500 fill-current" />
+                      <div className="relative">
+                        <Star className="w-6 h-6 text-yellow-500 fill-current" />
+                      </div>
                       <span
-                        className={`text-2xl font-bold transition-colors duration-200 ${
-                          isDarkMode ? "text-white" : "text-black"
-                        }`}
+                        className="text-2xl font-bold transition-colors duration-200"
+                        style={{ color: colors.text.primary }}
                       >
                         {mentor.rating}
                       </span>
                       <span
-                        className={`transition-colors duration-200 ${
-                          isDarkMode ? "text-gray-300" : "text-gray-600"
-                        }`}
+                        className="transition-colors duration-200"
+                        style={{ color: colors.text.secondary }}
                       >
                         ({mentor.sessions} sessions)
                       </span>
                     </div>
-                  </div>
+                  </motion.div>
 
-                  {/* All Expertise Fields */}
-                  <div className="mb-6">
+                  {/* All Expertise Fields with Enhanced Styling and Animations */}
+                  <motion.div
+                    className="mb-6"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, delay: 0.5 }}
+                  >
                     <h3
                       className={`text-lg font-semibold mb-3 transition-colors duration-200 ${
                         isDarkMode ? "text-white" : "text-black"
@@ -217,160 +240,163 @@ export function SessionBookingDialog({
                     <div className="flex flex-wrap gap-2">
                       {mentor.expertise &&
                         mentor.expertise.map((skill, index) => (
-                          <span
+                          <motion.span
                             key={index}
-                            className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors duration-200 ${
-                              isDarkMode
-                                ? "bg-green-900/20 text-green-400 border-green-700"
-                                : "bg-green-50 text-green-600 border-green-200"
-                            }`}
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{
+                              duration: 0.4,
+                              delay: 0.6 + index * 0.1,
+                            }}
+                            whileHover={{ scale: 1.05, y: -2 }}
+                            className="px-3 py-1.5 rounded-lg text-sm font-medium border transition-all duration-200 cursor-pointer"
+                            style={{
+                              backgroundColor: colors.background.secondary,
+                              color: colors.text.primary,
+                              borderColor: colors.border.primary,
+                            }}
                           >
                             {skill}
-                          </span>
+                          </motion.span>
                         ))}
                     </div>
-                  </div>
+                  </motion.div>
 
-                  {/* Full Description */}
-                  <div>
+                  {/* Full Description with Enhanced Styling */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, delay: 0.7 }}
+                  >
                     <h3
-                      className={`text-lg font-semibold mb-3 transition-colors duration-200 ${
-                        isDarkMode ? "text-white" : "text-black"
-                      }`}
+                      className="text-lg font-semibold mb-3 transition-colors duration-200"
+                      style={{ color: colors.text.primary }}
                     >
                       About
                     </h3>
                     <p
-                      className={`leading-relaxed transition-colors duration-200 ${
-                        isDarkMode ? "text-gray-300" : "text-gray-600"
-                      }`}
+                      className="leading-relaxed transition-colors duration-200"
+                      style={{ color: colors.text.secondary }}
                     >
                       {mentor.about}
                     </p>
-                  </div>
+                  </motion.div>
                 </div>
               </div>
 
-              {/* Weekly Schedule - Direct Time Selection */}
-              <div className="mb-8">
+              {/* Weekly Schedule - Direct Time Selection with Enhanced Background and Animations */}
+              <motion.div
+                className="mb-8"
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.8 }}
+              >
                 <h4
-                  className={`text-xl font-semibold mb-4 transition-colors duration-200 ${
-                    isDarkMode ? "text-white" : "text-black"
-                  }`}
+                  className="text-xl font-semibold mb-4 transition-colors duration-200"
+                  style={{ color: colors.text.primary }}
                 >
                   Select Available Time
                 </h4>
 
-                {/* Week Header - Days of Week */}
-                <div className="grid grid-cols-6 gap-2 mb-3">
-                  {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
-                    <div
-                      key={day}
-                      className={`p-2 text-center text-sm font-medium transition-colors duration-200 ${
-                        isDarkMode ? "text-gray-400" : "text-gray-600"
-                      }`}
-                    >
-                      {day}
-                    </div>
-                  ))}
-                </div>
-
-                {/* Weekly Schedule Grid - Direct Time Selection */}
-                <div className="grid grid-cols-6 gap-2">
-                  {getAvailableDates()
-                    .slice(0, 6)
-                    .map((date, index) => {
-                      const isAvailable = isDateAvailable(date);
-                      const isToday =
-                        date.toDateString() === new Date().toDateString();
-                      const dayName = date.toLocaleDateString("en-US", {
-                        weekday: "short",
-                      });
-                      const isSelected = selectedDate === formatDate(date);
-
-                      return (
-                        <div
-                          key={index}
-                          className={`p-3 text-sm rounded-lg border-2 transition-all duration-200 min-h-40 ${
-                            isToday
-                              ? isDarkMode
-                                ? "bg-blue-900/20 border-blue-600"
-                                : "bg-blue-50 border-blue-300"
-                              : isAvailable
-                              ? isDarkMode
-                                ? "bg-[#333333] border-gray-600"
-                                : "bg-gray-50 border-gray-200"
-                              : isDarkMode
-                              ? "bg-[#333333] border-gray-700 opacity-50"
-                              : "bg-gray-50 border-gray-100 opacity-50"
-                          }`}
-                        >
-                          <div className="text-center mb-2">
-                            <div
-                              className={`text-xs mb-1 transition-colors duration-200 ${
-                                isToday
-                                  ? isDarkMode
-                                    ? "text-blue-400"
-                                    : "text-blue-600"
-                                  : isDarkMode
-                                  ? "text-gray-400"
-                                  : "text-gray-500"
-                              }`}
-                            >
-                              {dayName}
-                            </div>
-                            <div
-                              className={`font-medium mb-2 transition-colors duration-200 ${
-                                isToday
-                                  ? isDarkMode
-                                    ? "text-blue-300"
-                                    : "text-blue-700"
-                                  : isDarkMode
-                                  ? "text-gray-200"
-                                  : "text-gray-700"
-                              }`}
-                            >
-                              {date.getDate()}
-                            </div>
+                {/* Week Days and Time Selection */}
+                <div className="grid grid-cols-6 gap-4">
+                  {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(
+                    (day, dayIndex) => (
+                      <motion.div
+                        key={day}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{
+                          duration: 0.4,
+                          delay: 0.9 + dayIndex * 0.1,
+                        }}
+                        className={`space-y-3 px-3 py-2 rounded-lg border-2 ${
+                          dayIndex < 5 ? "border-r-2" : ""
+                        }`}
+                        style={{
+                          borderColor: colors.border.primary,
+                          backgroundColor: colors.background.secondary,
+                        }}
+                      >
+                        {/* Day Header */}
+                        <div className="text-center">
+                          <div
+                            className="text-sm font-medium transition-colors duration-200"
+                            style={{ color: colors.text.primary }}
+                          >
+                            {day}
                           </div>
-
-                          {isAvailable && (
-                            <div className="space-y-1">
-                              {getAvailableTimes()
-                                .slice(0, 8)
-                                .map((time) => (
-                                  <button
-                                    key={time}
-                                    onClick={() => {
-                                      setSelectedDate(formatDate(date));
-                                      setSelectedTime(time);
-                                    }}
-                                    className={`w-full text-xs px-2 py-1 rounded transition-all duration-200 ${
-                                      selectedDate === formatDate(date) &&
-                                      selectedTime === time
-                                        ? "bg-blue-500 text-white shadow-md"
-                                        : isDarkMode
-                                        ? "bg-green-900/20 text-green-400 hover:bg-green-800"
-                                        : "bg-green-50 text-green-600 hover:bg-green-100"
-                                    }`}
-                                  >
-                                    {time}
-                                  </button>
-                                ))}
-                            </div>
-                          )}
                         </div>
-                      );
-                    })}
-                </div>
-              </div>
 
-              {/* Session Topic */}
-              <div className="mb-8">
+                        {/* Time Slots */}
+                        <div className="space-y-2">
+                          {getAvailableTimes()
+                            .slice(0, 8)
+                            .map((time, timeIndex) => {
+                              // Create consistent availability based on day and time indices
+                              const isAvailable =
+                                (dayIndex + timeIndex) % 3 !== 0; // More consistent pattern
+                              const isSelected =
+                                selectedDate === day && selectedTime === time;
+
+                              return (
+                                <motion.button
+                                  key={time}
+                                  initial={{ opacity: 0, x: -10 }}
+                                  animate={{ opacity: 1, x: 0 }}
+                                  transition={{
+                                    duration: 0.3,
+                                    delay: 1.5 + timeIndex * 0.05,
+                                  }}
+                                  whileHover={{ scale: 1.05 }}
+                                  whileTap={{ scale: 0.95 }}
+                                  onClick={() => {
+                                    if (isAvailable) {
+                                      setSelectedDate(day);
+                                      setSelectedTime(time);
+                                    }
+                                  }}
+                                  disabled={!isAvailable}
+                                  className={`w-full text-xs px-2 py-1 rounded transition-all duration-200 ${
+                                    !isAvailable
+                                      ? "cursor-not-allowed"
+                                      : "cursor-pointer"
+                                  }`}
+                                  style={{
+                                    backgroundColor: isSelected
+                                      ? "rgba(120, 200, 65, 0.3)"
+                                      : colors.background.primary,
+                                    color: isSelected
+                                      ? colors.text.primary
+                                      : isAvailable
+                                      ? colors.text.primary
+                                      : "#6B7280",
+                                    border: `2px solid ${
+                                      isAvailable ? "#78C841" : "#000000"
+                                    }`,
+                                  }}
+                                >
+                                  {time}
+                                </motion.button>
+                              );
+                            })}
+                        </div>
+                      </motion.div>
+                    )
+                  )}
+                </div>
+              </motion.div>
+
+              {/* Session Topic with Enhanced Styling and Animations */}
+              <motion.div
+                className="mb-8"
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 1.2 }}
+              >
                 <h4
-                  className={`text-xl font-semibold mb-4 transition-colors duration-200 ${
-                    isDarkMode ? "text-white" : "text-black"
-                  }`}
+                  className="text-xl font-semibold mb-4 transition-colors duration-200"
+                  style={{ color: colors.text.primary }}
                 >
                   Session Topic
                 </h4>
@@ -378,149 +404,123 @@ export function SessionBookingDialog({
                   value={topic}
                   onChange={(e) => setTopic(e.target.value)}
                   placeholder="What would you like to discuss in this session?"
-                  className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors duration-200 ${
-                    isDarkMode
-                      ? "border-white/20 bg-black/60 text-white"
-                      : "border-black/20 bg-gray-100 text-black"
-                  }`}
+                  className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
+                  style={{
+                    backgroundColor: colors.background.primary,
+                    borderColor: colors.border.primary,
+                    color: colors.text.primary,
+                  }}
                   rows={2}
                 />
-              </div>
+              </motion.div>
 
-              {/* Compensation Options */}
-              <div className="mb-8">
+              {/* Compensation Options with Enhanced Background Styling and Animations */}
+              <motion.div
+                className="mb-8"
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 1.4 }}
+              >
                 <h4
-                  className={`text-xl font-semibold mb-4 transition-colors duration-200 ${
-                    isDarkMode ? "text-white" : "text-black"
-                  }`}
+                  className="text-xl font-semibold mb-4 transition-colors duration-200"
+                  style={{ color: colors.text.primary }}
                 >
                   What would you like to offer the mentor?
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div
-                    onClick={() => setSelectedCompensation("ice-cream")}
-                    className={`p-4 border-2 rounded-lg transition-all duration-200 cursor-pointer ${
-                      selectedCompensation === "ice-cream"
-                        ? "border-blue-500 bg-black/80 shadow-md"
-                        : "border-gray-600 hover:border-blue-400 bg-black/60 hover:bg-black/80"
-                    }`}
-                  >
-                    <div className="flex items-center space-x-3">
-                      <div
-                        className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                          selectedCompensation === "ice-cream"
-                            ? "bg-blue-500/20"
-                            : "bg-blue-500/20"
-                        }`}
-                      >
-                        <span className="text-2xl">🍦</span>
-                      </div>
-                      <div>
-                        <h5
-                          className={`font-semibold transition-colors duration-200 ${
-                            isDarkMode ? "text-white" : "text-black"
-                          }`}
+                  {[
+                    {
+                      key: "ice-cream",
+                      icon: "🍦",
+                      title: "Free Ice Cream",
+                      description: "Treat your mentor to a sweet session",
+                      color: "pink",
+                    },
+                    {
+                      key: "coffee",
+                      icon: "☕",
+                      title: "Free Coffee",
+                      description: "Fuel your mentor's energy",
+                      color: "amber",
+                    },
+                    {
+                      key: "free",
+                      icon: "🎁",
+                      title: "Free Gift",
+                      description: "A small token of appreciation",
+                      color: "purple",
+                    },
+                  ].map((option, index) => (
+                    <motion.div
+                      key={option.key}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.5, delay: 1.6 + index * 0.1 }}
+                      whileHover={{ scale: 1.03, y: -5 }}
+                      onClick={() => setSelectedCompensation(option.key)}
+                      className="p-4 border-2 rounded-lg transition-all duration-200 cursor-pointer hover:shadow-xl"
+                      style={{
+                        backgroundColor:
+                          selectedCompensation === option.key
+                            ? colors.background.secondary
+                            : colors.background.primary,
+                        borderColor:
+                          selectedCompensation === option.key
+                            ? colors.accent.primary
+                            : colors.border.primary,
+                      }}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div
+                          className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200"
+                          style={{
+                            backgroundColor:
+                              selectedCompensation === option.key
+                                ? colors.background.tertiary
+                                : colors.background.secondary,
+                          }}
                         >
-                          Free Ice Cream
-                        </h5>
-                        <p
-                          className={`text-sm transition-colors duration-200 ${
-                            isDarkMode ? "text-gray-300" : "text-gray-600"
-                          }`}
-                        >
-                          Treat your mentor to a sweet session
-                        </p>
+                          <span className="text-2xl">{option.icon}</span>
+                        </div>
+                        <div>
+                          <h5
+                            className="font-semibold transition-colors duration-200"
+                            style={{ color: colors.text.primary }}
+                          >
+                            {option.title}
+                          </h5>
+                          <p
+                            className="text-sm transition-colors duration-200"
+                            style={{ color: colors.text.secondary }}
+                          >
+                            {option.description}
+                          </p>
+                        </div>
+                        {selectedCompensation === option.key && (
+                          <motion.div
+                            initial={{ scale: 0, rotate: -180 }}
+                            animate={{ scale: 1, rotate: 0 }}
+                            transition={{ duration: 0.3, type: "spring" }}
+                          >
+                            <CheckCircle
+                              className="w-6 h-6 ml-auto"
+                              style={{ color: colors.accent.primary }}
+                            />
+                          </motion.div>
+                        )}
                       </div>
-                      {selectedCompensation === "ice-cream" && (
-                        <CheckCircle className="w-6 h-6 text-blue-500 ml-auto" />
-                      )}
-                    </div>
-                  </div>
-
-                  <div
-                    onClick={() => setSelectedCompensation("coffee")}
-                    className={`p-4 border-2 rounded-lg transition-all duration-200 cursor-pointer ${
-                      selectedCompensation === "coffee"
-                        ? "border-green-500 bg-black/80 shadow-md"
-                        : "border-gray-600 hover:border-green-400 bg-black/60 hover:bg-black/80"
-                    }`}
-                  >
-                    <div className="flex items-center space-x-3">
-                      <div
-                        className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                          selectedCompensation === "coffee"
-                            ? "bg-green-500/20"
-                            : "bg-green-500/20"
-                        }`}
-                      >
-                        <span className="text-2xl">☕</span>
-                      </div>
-                      <div>
-                        <h5
-                          className={`font-semibold transition-colors duration-200 ${
-                            isDarkMode ? "text-white" : "text-black"
-                          }`}
-                        >
-                          Free Coffee
-                        </h5>
-                        <p
-                          className={`text-sm transition-colors duration-200 ${
-                            isDarkMode ? "text-gray-300" : "text-gray-600"
-                          }`}
-                        >
-                          Fuel your mentor&apos;s energy
-                        </p>
-                      </div>
-                      {selectedCompensation === "coffee" && (
-                        <CheckCircle className="w-6 h-6 text-green-500 ml-auto" />
-                      )}
-                    </div>
-                  </div>
-
-                  <div
-                    onClick={() => setSelectedCompensation("free")}
-                    className={`p-4 border-2 rounded-lg transition-all duration-200 cursor-pointer ${
-                      selectedCompensation === "free"
-                        ? "border-purple-500 bg-black/80 shadow-md"
-                        : "border-gray-600 hover:border-purple-400 bg-black/60 hover:bg-black/80"
-                    }`}
-                  >
-                    <div className="flex items-center space-x-3">
-                      <div
-                        className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                          selectedCompensation === "free"
-                            ? "bg-purple-500/20"
-                            : "bg-purple-500/20"
-                        }`}
-                      >
-                        <span className="text-2xl">🎁</span>
-                      </div>
-                      <div>
-                        <h5
-                          className={`font-semibold transition-colors duration-200 ${
-                            isDarkMode ? "text-white" : "text-black"
-                          }`}
-                        >
-                          Free Gift
-                        </h5>
-                        <p
-                          className={`text-sm transition-colors duration-200 ${
-                            isDarkMode ? "text-gray-300" : "text-gray-600"
-                          }`}
-                        >
-                          A small token of appreciation
-                        </p>
-                      </div>
-                      {selectedCompensation === "free" && (
-                        <CheckCircle className="w-6 h-6 text-purple-500 ml-auto" />
-                      )}
-                    </div>
-                  </div>
+                    </motion.div>
+                  ))}
                 </div>
-              </div>
+              </motion.div>
 
-              {/* Confirm Button */}
-              <div className="text-center">
+              {/* Confirm Button with Enhanced Styling and Animations */}
+              <motion.div
+                className="text-center"
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 1.8 }}
+              >
                 <Button
                   onClick={handleConfirm}
                   disabled={
@@ -529,12 +529,15 @@ export function SessionBookingDialog({
                     !topic ||
                     !selectedCompensation
                   }
-                  className="px-8 py-4 text-xl font-semibold bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                  className="px-8 py-4 text-xl font-semibold text-white rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95"
+                  style={{
+                    backgroundColor: colors.accent.primary,
+                  }}
                 >
                   <BookOpen className="w-6 h-6 mr-3" />
                   Confirm Booking
                 </Button>
-              </div>
+              </motion.div>
             </div>
           </motion.div>
         </motion.div>

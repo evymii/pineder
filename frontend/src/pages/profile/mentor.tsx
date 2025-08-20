@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Layout } from "../../components/layout";
 import { Button } from "../../design/system/button";
@@ -11,7 +11,6 @@ import {
   AvatarImage,
 } from "../../design/system/avatar";
 import { Badge } from "../../design/system/badge";
-
 import {
   Edit,
   LogOut,
@@ -33,6 +32,8 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/router";
 
 interface MentorProfile {
   fullName: string;
@@ -94,6 +95,64 @@ interface Session {
 }
 
 const MentorProfilePage: React.FC = () => {
+  // This would typically come from route params or context
+  const isOwnProfile = false; // TODO: Replace with actual logic based on route/user context
+  const router = useRouter();
+  const usernameParam = (router.query.username as string) || "";
+
+  // Mock Mentor Data Examples (for future use with different profiles)
+  /*
+  const mockMentors = {
+    "sarah-chen": {
+      fullName: "Dr. Sarah Chen",
+      title: "Senior Software Engineer",
+      company: "TechCorp Inc.",
+      employeeId: "EMP2024001",
+      email: "sarah.chen@techcorp.com",
+      phone: "+1 (555) 987-6543",
+      location: "San Francisco, CA",
+      bio: "Experienced software engineer with 8+ years in full-stack development, specializing in React, Node.js, and cloud architecture. Passionate about mentoring students and sharing industry knowledge.",
+      avatar: "",
+      backgroundImage: "",
+      isOnline: true,
+      hourlyRate: 75,
+      currency: "USD",
+      expertise: ["React", "Node.js", "Python", "AWS", "Docker", "Kubernetes"],
+      languages: ["English", "Mandarin", "Spanish"],
+      links: {
+        github: "https://github.com/sarahchen",
+        portfolio: "https://sarahchen.dev",
+        linkedin: "https://linkedin.com/in/sarahchen",
+        website: "https://sarahchen.com",
+      },
+      stats: { sessionsCompleted: 156, totalHours: 312, rating: 4.9, studentsMentored: 42, yearsExperience: 8 }
+    },
+    "david-kim": {
+      fullName: "David Kim",
+      title: "Lead Data Scientist",
+      company: "DataFlow Analytics",
+      employeeId: "EMP2024002",
+      email: "david.kim@dataflow.com",
+      phone: "+1 (555) 123-4567",
+      location: "New York, NY",
+      bio: "Data science leader with expertise in machine learning, statistical analysis, and big data technologies. Passionate about helping students understand complex data concepts.",
+      avatar: "",
+      backgroundImage: "",
+      isOnline: false,
+      hourlyRate: 85,
+      currency: "USD",
+      expertise: ["Python", "R", "TensorFlow", "PyTorch", "SQL", "Spark"],
+      languages: ["English", "Korean"],
+      links: {
+        github: "https://github.com/davidkim-ds",
+        portfolio: "https://davidkim.ai",
+        linkedin: "https://linkedin.com/in/davidkim-ds",
+      },
+      stats: { sessionsCompleted: 89, totalHours: 178, rating: 4.8, studentsMentored: 28, yearsExperience: 6 }
+    }
+  };
+  */
+
   const [isEditing, setIsEditing] = useState(false);
   const [profile, setProfile] = useState<MentorProfile>({
     fullName: "Dr. Sarah Chen",
@@ -104,8 +163,8 @@ const MentorProfilePage: React.FC = () => {
     phone: "+1 (555) 987-6543",
     location: "San Francisco, CA",
     bio: "Experienced software engineer with 8+ years in full-stack development, specializing in React, Node.js, and cloud architecture. Passionate about mentoring students and sharing industry knowledge.",
-    avatar: "/api/placeholder/150/150",
-    backgroundImage: "/api/placeholder/1200/300",
+    avatar: "",
+    backgroundImage: "",
     isOnline: true,
     hourlyRate: 75,
     currency: "USD",
@@ -183,6 +242,13 @@ const MentorProfilePage: React.FC = () => {
       },
     ],
   });
+
+  useEffect(() => {
+    if (usernameParam) {
+      // When viewing a specific mentor by username, assume visitor view
+      // In a real app, fetch mentor by username here
+    }
+  }, [usernameParam]);
 
   const [editForm, setEditForm] = useState<MentorProfile>(profile);
 
@@ -842,9 +908,15 @@ const MentorProfilePage: React.FC = () => {
                       profile.upcomingSessions.map((session) => (
                         <div key={session.id} className="p-3 border rounded-lg">
                           <div className="flex items-center justify-between mb-2">
-                            <span className="font-medium text-foreground">
+                            <Link
+                              href={`/profile/student?username=${session.studentName
+                                .toLowerCase()
+                                .replace(/[^a-z0-9]+/g, "-")
+                                .replace(/(^-|-$)/g, "")}`}
+                              className="font-medium text-foreground hover:text-accent"
+                            >
                               {session.studentName}
-                            </span>
+                            </Link>
                             <Badge variant="outline">{session.status}</Badge>
                           </div>
                           <div className="text-sm text-muted-foreground">
@@ -863,45 +935,178 @@ const MentorProfilePage: React.FC = () => {
               </Card>
 
               {/* Account Owner Actions */}
-              <Card>
-                <CardContent className="pt-6">
-                  <h3 className="text-lg font-semibold mb-4">
-                    Account Actions
-                  </h3>
+              {isOwnProfile ? (
+                /* Account Owner Actions */
+                <Card>
+                  <CardContent className="pt-6">
+                    <h3 className="text-lg font-semibold mb-4">
+                      Account Actions
+                    </h3>
 
-                  <div className="space-y-3">
-                    {isEditing ? (
-                      <>
-                        <Button onClick={handleSave} className="w-full">
-                          Save Changes
-                        </Button>
-                        <Button
-                          onClick={handleCancel}
-                          variant="outline"
-                          className="w-full"
-                        >
-                          Cancel
-                        </Button>
-                      </>
-                    ) : (
-                      <>
-                        <Button
-                          onClick={() => setIsEditing(true)}
-                          className="w-full"
-                          variant="outline"
-                        >
-                          <Edit className="w-4 h-4 mr-2" />
-                          Edit Profile
-                        </Button>
-                        <Button variant="destructive" className="w-full">
-                          <LogOut className="w-4 h-4 mr-2" />
-                          Log Out
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
+                    <div className="space-y-3">
+                      {isEditing ? (
+                        <>
+                          <Button onClick={handleSave} className="w-full">
+                            Save Changes
+                          </Button>
+                          <Button
+                            onClick={handleCancel}
+                            variant="outline"
+                            className="w-full"
+                          >
+                            Cancel
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <Button
+                            onClick={() => setIsEditing(true)}
+                            className="w-full"
+                            variant="outline"
+                          >
+                            <Edit className="w-4 h-4 mr-2" />
+                            Edit Profile
+                          </Button>
+                          <Button variant="destructive" className="w-full">
+                            <LogOut className="w-4 h-4 mr-2" />
+                            Log Out
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                /* Rating and Feedback for Other Users */
+                <>
+                  {/* Rating Section */}
+                  <Card>
+                    <CardContent className="pt-6">
+                      <h3 className="flex items-center gap-2 mb-4 text-lg font-semibold">
+                        <Star className="w-5 h-5" />
+                        Rating & Reviews
+                      </h3>
+
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-3">
+                          <div className="text-3xl font-bold text-primary">
+                            {profile.stats.rating}
+                          </div>
+                          <div className="flex gap-1">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <Star
+                                key={star}
+                                className={`w-5 h-5 ${
+                                  star <= Math.floor(profile.stats.rating)
+                                    ? "fill-yellow-400 text-yellow-400"
+                                    : "text-gray-300"
+                                }`}
+                              />
+                            ))}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            ({profile.stats.sessionsCompleted} sessions)
+                          </div>
+                        </div>
+
+                        <div className="text-sm text-muted-foreground">
+                          Based on {profile.stats.studentsMentored} student
+                          reviews
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4 pt-2">
+                          <div className="text-center p-3 bg-accent/20 rounded-lg">
+                            <div className="text-lg font-bold text-primary">
+                              {profile.stats.yearsExperience}+
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              Years Experience
+                            </div>
+                          </div>
+                          <div className="text-center p-3 bg-accent/20 rounded-lg">
+                            <div className="text-lg font-bold text-primary">
+                              ${profile.hourlyRate}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              Per Hour
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Feedback Section */}
+                  <Card>
+                    <CardContent className="pt-6">
+                      <h3 className="mb-4 text-lg font-semibold">
+                        Leave Feedback
+                      </h3>
+
+                      <div className="space-y-3">
+                        <div>
+                          <Label className="text-sm font-medium text-muted-foreground">
+                            Rating
+                          </Label>
+                          <div className="flex gap-1 mt-2">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <button
+                                key={star}
+                                className="text-2xl text-gray-300 hover:text-yellow-400 transition-colors"
+                                onClick={() => {
+                                  // TODO: Implement rating submission
+                                  console.log(`Rating: ${star}`);
+                                }}
+                              >
+                                ★
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div>
+                          <Label className="text-sm font-medium text-muted-foreground">
+                            Comment
+                          </Label>
+                          <textarea
+                            placeholder="Share your experience working with this mentor..."
+                            className="w-full p-3 mt-1 border rounded-lg resize-none min-h-[80px]"
+                            rows={3}
+                          />
+                        </div>
+
+                        <Button className="w-full">Submit Feedback</Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Book Session Section */}
+                  <Card>
+                    <CardContent className="pt-6">
+                      <h3 className="mb-4 text-lg font-semibold">
+                        Book a Session
+                      </h3>
+
+                      <div className="space-y-3">
+                        <div className="text-center p-4 bg-primary/10 rounded-lg">
+                          <div className="text-2xl font-bold text-primary">
+                            ${profile.hourlyRate}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            per hour
+                          </div>
+                        </div>
+
+                        <Button className="w-full">Schedule Session</Button>
+
+                        <div className="text-xs text-center text-muted-foreground">
+                          Available in {profile.languages.join(", ")}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </>
+              )}
             </div>
           </div>
         </div>

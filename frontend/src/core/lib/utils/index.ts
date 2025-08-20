@@ -1,12 +1,10 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 
-// Utility function to merge Tailwind classes
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-// Date utilities
 export function formatDate(date: Date | string): string {
   const d = new Date(date);
   return d.toLocaleDateString("en-US", {
@@ -63,7 +61,6 @@ export function getRelativeTime(date: Date | string): string {
   return formatDate(date);
 }
 
-// String utilities
 export function capitalize(str: string): string {
   return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
 }
@@ -81,7 +78,6 @@ export function slugify(str: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
-// Number utilities
 export function formatCurrency(
   amount: number,
   currency: string = "USD"
@@ -106,7 +102,6 @@ export function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
 
-// Array utilities
 export function chunk<T>(array: T[], size: number): T[][] {
   const chunks: T[][] = [];
   for (let i = 0; i < array.length; i += size) {
@@ -134,7 +129,6 @@ export function sortBy<T>(
   });
 }
 
-// Object utilities
 export function pick<T extends object, K extends keyof T>(
   obj: T,
   keys: K[]
@@ -176,7 +170,6 @@ export function isValidUrl(url: string): boolean {
   }
 }
 
-// Color utilities
 export function hexToRgb(
   hex: string
 ): { r: number; g: number; b: number } | null {
@@ -194,7 +187,6 @@ export function rgbToHex(r: number, g: number, b: number): string {
   return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
 }
 
-// Storage utilities
 export function setLocalStorage(key: string, value: any): void {
   try {
     localStorage.setItem(key, JSON.stringify(value));
@@ -221,7 +213,6 @@ export function removeLocalStorage(key: string): void {
   }
 }
 
-// Debounce utility
 export function debounce<T extends (...args: any[]) => any>(
   func: T,
   wait: number
@@ -233,7 +224,6 @@ export function debounce<T extends (...args: any[]) => any>(
   };
 }
 
-// Throttle utility
 export function throttle<T extends (...args: any[]) => any>(
   func: T,
   limit: number
@@ -248,7 +238,6 @@ export function throttle<T extends (...args: any[]) => any>(
   };
 }
 
-// Random utilities
 export function randomId(length: number = 8): string {
   const chars =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -263,7 +252,6 @@ export function randomInt(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-// Error handling utilities
 export function isError(error: any): error is Error {
   return error instanceof Error;
 }
@@ -278,7 +266,6 @@ export function getErrorMessage(error: unknown): string {
   return "An unknown error occurred";
 }
 
-// Async utilities
 export function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }

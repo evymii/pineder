@@ -1,8 +1,8 @@
 "use client";
 import React, { createContext, useContext, useEffect, useState } from "react";
 
-type Theme = "light" | "dark";
-type ColorTheme =
+export type Theme = "light" | "dark";
+export type ColorTheme =
   | "default"
   | "original"
   | "nature"
@@ -76,12 +76,12 @@ export const themeConfig = {
   dark: {
     // Background colors - Dark and black
     background: {
-      primary: "#000000", // Pure black
+      primary: "#222222", // Dark gray background
       secondary: "#1a1a1a", // Very dark gray
       tertiary: "#2d2d2d", // Dark gray
-      card: "#1a1a1a", // Dark card background
+      card: "#222222", // Dark card background
       cardHover: "#2d2d2d", // Darker hover
-      modal: "#1a1a1a", // Dark modal background
+      modal: "#222222", // Dark modal background
       modalOverlay: "rgba(0, 0, 0, 0.5)", // Semi-transparent black
     },
     // Text colors - White and light gray
@@ -110,7 +110,7 @@ export const themeConfig = {
     },
     // Navigation colors
     navigation: {
-      background: "#000000", // Black background
+      background: "#222222", // Dark gray background
       border: "#495057", // Consistent border color
       text: "#ffffff", // White text
       textHover: "#08CB00", // Green hover

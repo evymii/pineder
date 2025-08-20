@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { isValidEmail, isValidPhone, isValidUrl } from "../utils/index";
 
-// Common validation schemas
 export const emailSchema = z
   .string()
   .min(1, "Email is required")
@@ -376,7 +375,6 @@ export const validateForm = (
   return errors;
 };
 
-// Export all schemas
 export const schemas = {
   email: emailSchema,
   password: passwordSchema,

@@ -16,7 +16,6 @@ export const Hero = () => {
   ];
 
   useEffect(() => {
-    // Simulate loading
     const timer = setTimeout(() => {
       setIsLoading(false);
     }, 2000);
@@ -25,7 +24,6 @@ export const Hero = () => {
   }, []);
 
   useEffect(() => {
-    // Cycle through code snippets
     const interval = setInterval(() => {
       setCurrentCodeIndex((prev) => (prev + 1) % codeSnippets.length);
     }, 3000);
@@ -37,7 +35,6 @@ export const Hero = () => {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black">
         <div className="text-center">
-          {/* Coding-themed spinner */}
           <div className="mb-6">
             <motion.div
               className="w-16 h-16 mx-auto border-4 border-green-500 rounded-full border-t-transparent"
@@ -46,7 +43,6 @@ export const Hero = () => {
             />
           </div>
 
-          {/* Loading text */}
           <motion.h2
             className="mb-4 text-2xl font-bold text-white"
             initial={{ opacity: 0, y: 20 }}
@@ -56,7 +52,6 @@ export const Hero = () => {
             Initializing Code Environment...
           </motion.h2>
 
-          {/* Pulsing dots */}
           <div className="flex justify-center space-x-2">
             {[0, 1, 2].map((i) => (
               <motion.div
@@ -72,7 +67,6 @@ export const Hero = () => {
             ))}
           </div>
 
-          {/* Progress bar */}
           <motion.div
             className="w-64 h-2 mx-auto mt-6 overflow-hidden bg-gray-700 rounded-full"
             initial={{ opacity: 0 }}
@@ -93,11 +87,9 @@ export const Hero = () => {
 
   return (
     <section className="relative flex items-center justify-center min-h-screen overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-black">
-      {/* Background gradient */}
       <div className="absolute inset-0 bg-gradient-to-br from-green-900/20 via-transparent to-blue-900/20" />
 
       <div className="relative z-10 max-w-6xl px-4 mx-auto text-center">
-        {/* Main heading with staggered animation */}
         <motion.div
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
@@ -122,7 +114,6 @@ export const Hero = () => {
           </motion.h1>
         </motion.div>
 
-        {/* Animated code snippet */}
         <motion.div
           className="mb-8"
           initial={{ opacity: 0, scale: 0.8 }}
@@ -153,7 +144,6 @@ export const Hero = () => {
           </div>
         </motion.div>
 
-        {/* Description */}
         <motion.p
           className="max-w-3xl mx-auto mb-12 text-xl text-gray-300"
           initial={{ opacity: 0, y: 20 }}
@@ -165,7 +155,6 @@ export const Hero = () => {
           building the future.
         </motion.p>
 
-        {/* CTA Buttons */}
         <motion.div
           className="flex flex-col justify-center gap-4 mb-16 sm:flex-row"
           initial={{ opacity: 0, y: 20 }}
@@ -202,7 +191,6 @@ export const Hero = () => {
           </motion.button>
         </motion.div>
 
-        {/* Tech stats */}
         <motion.div
           className="grid grid-cols-2 gap-8 mb-16 md:grid-cols-4"
           initial={{ opacity: 0, y: 30 }}
@@ -238,7 +226,6 @@ export const Hero = () => {
           ))}
         </motion.div>
 
-        {/* Programming languages showcase */}
         <motion.div
           className="mb-16"
           initial={{ opacity: 0, y: 30 }}
@@ -288,7 +275,6 @@ export const Hero = () => {
         </motion.div>
       </div>
 
-      {/* Floating tech icons */}
       <div className="absolute inset-0 pointer-events-none">
         {[
           { icon: Zap, x: "10%", y: "20%" },

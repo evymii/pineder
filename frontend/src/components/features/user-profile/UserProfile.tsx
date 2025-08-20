@@ -2,7 +2,16 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Settings, LogOut, X, Lock, Eye, EyeOff } from "lucide-react";
+import {
+  Settings,
+  LogOut,
+  X,
+  Lock,
+  Eye,
+  EyeOff,
+  ChevronUp,
+  ChevronDown,
+} from "lucide-react";
 import {
   Avatar,
   AvatarFallback,
@@ -120,32 +129,32 @@ export function UserProfile({ user, isSignedIn = false }: UserProfileProps) {
         className="w-10 h-10 border-2 border-transparent hover:border-[var(--pico-secondary)] transition-colors cursor-pointer"
         onClick={openProfile}
       >
-            <AvatarFallback className="bg-gradient-to-br from-[var(--pico-secondary)] to-[var(--pico-accent)] text-white">
-              {userData.name
-                .split(" ")
-                .map((n) => n[0])
-                .join("")}
-            </AvatarFallback>
-        </Avatar>
+        <AvatarFallback className="bg-gradient-to-br from-[var(--pico-secondary)] to-[var(--pico-accent)] text-white">
+          {userData.name
+            .split(" ")
+            .map((n) => n[0])
+            .join("")}
+        </AvatarFallback>
+      </Avatar>
 
       {/* Profile Modal */}
       <AnimatePresence>
         {open && (
           <>
             {/* Backdrop */}
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
               className="fixed inset-0 bg-black/50 z-40"
-                onClick={closeProfile}
+              onClick={closeProfile}
             />
 
             {/* Modal */}
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
               className="fixed inset-0 z-50 flex items-center justify-center p-4"
             >
@@ -154,14 +163,14 @@ export function UserProfile({ user, isSignedIn = false }: UserProfileProps) {
                   <CardTitle className="text-xl font-semibold">
                     User Profile
                   </CardTitle>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                onClick={closeProfile}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={closeProfile}
                     className="h-8 w-8"
                   >
                     <X className="h-4 w-4" />
-                        </Button>
+                  </Button>
                 </CardHeader>
 
                 <CardContent className="space-y-6">
@@ -169,29 +178,31 @@ export function UserProfile({ user, isSignedIn = false }: UserProfileProps) {
                   <div className="flex items-center space-x-4">
                     <Avatar className="w-20 h-20">
                       <AvatarFallback className="bg-gradient-to-br from-[var(--pico-secondary)] to-[var(--pico-accent)] text-white text-2xl">
-                                {userData.name
-                                  .split(" ")
-                                  .map((n) => n[0])
-                                  .join("")}
-                              </AvatarFallback>
-                          </Avatar>
+                        {userData.name
+                          .split(" ")
+                          .map((n) => n[0])
+                          .join("")}
+                      </AvatarFallback>
+                    </Avatar>
                     <div className="flex-1">
                       <h3 className="text-xl font-semibold">{userData.name}</h3>
-                      <p className="text-muted-foreground">{userData.username}</p>
+                      <p className="text-muted-foreground">
+                        {userData.username}
+                      </p>
                       <Badge variant="secondary" className="mt-2">
                         {userData.role}
                       </Badge>
-                        </div>
-                        </div>
+                    </div>
+                  </div>
 
                   {/* Profile Info */}
                   <div className="space-y-4">
                     <div>
                       <Label htmlFor="bio">Bio</Label>
                       <p className="text-sm text-muted-foreground mt-1">
-                                {userData.bio}
-                              </p>
-                        </div>
+                        {userData.bio}
+                      </p>
+                    </div>
 
                     {userData.topics && userData.topics.length > 0 && (
                       <div>
@@ -216,168 +227,204 @@ export function UserProfile({ user, isSignedIn = false }: UserProfileProps) {
                           <span className="text-sm text-muted-foreground ml-2">
                             / 5.0
                           </span>
-                          </div>
                         </div>
-                    )}
-                        </div>
-
-                  {/* Password Change Section */}
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <Label>Password</Label>
-                          <Button
-                            variant="outline"
-                        size="sm"
-                        onClick={() => setShowPassword(!showPassword)}
-                          >
-                        {showPassword ? "Cancel" : "Change Password"}
-                          </Button>
-                        </div>
-
-        {showPassword && (
-              <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="space-y-4 p-4 border rounded-lg bg-muted/50"
-                      >
-                        <div className="space-y-2">
-                          <Label htmlFor="oldPassword">Current Password</Label>
-                          <div className="relative">
-                            <Input
-                              id="oldPassword"
-                              type={showOldPassword ? "text" : "password"}
-                              placeholder="Enter current password"
-                              value={passwordData.oldPassword}
-                              onChange={(e) =>
-                                setPasswordData({
-                                  ...passwordData,
-                                  oldPassword: e.target.value,
-                                })
-                              }
-                            />
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="absolute right-0 top-0 h-full px-3"
-                              onClick={() => setShowOldPassword(!showOldPassword)}
-                            >
-                              {showOldPassword ? (
-                                <EyeOff className="h-4 w-4" />
-                              ) : (
-                                <Eye className="h-4 w-4" />
-                              )}
-                            </Button>
-                          </div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="newPassword">New Password</Label>
-                          <div className="relative">
-                            <Input
-                              id="newPassword"
-                              type={showNewPassword ? "text" : "password"}
-                              placeholder="Enter new password"
-                              value={passwordData.newPassword}
-                              onChange={(e) =>
-                                setPasswordData({
-                                  ...passwordData,
-                                  newPassword: e.target.value,
-                                })
-                              }
-                            />
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="absolute right-0 top-0 h-full px-3"
-                              onClick={() => setShowNewPassword(!showNewPassword)}
-                            >
-                              {showNewPassword ? (
-                                <EyeOff className="h-4 w-4" />
-                              ) : (
-                                <Eye className="h-4 w-4" />
-                              )}
-                            </Button>
-                          </div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                          <div className="relative">
-                            <Input
-                              id="confirmPassword"
-                              type={showConfirmPassword ? "text" : "password"}
-                              placeholder="Confirm new password"
-                              value={passwordData.confirmPassword}
-                              onChange={(e) =>
-                                setPasswordData({
-                                  ...passwordData,
-                                  confirmPassword: e.target.value,
-                                })
-                              }
-                            />
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="absolute right-0 top-0 h-full px-3"
-                              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                            >
-                              {showConfirmPassword ? (
-                                <EyeOff className="h-4 w-4" />
-                              ) : (
-                                <Eye className="h-4 w-4" />
-                              )}
-                            </Button>
-                          </div>
-                        </div>
-
-                        <div className="flex space-x-2">
-                          <Button onClick={changePassword} className="flex-1">
-                            Update Password
-                          </Button>
-                          <Button
-                            variant="outline"
-                            onClick={resetPasswordForm}
-                            className="flex-1"
-                          >
-                            Reset
-                          </Button>
-                        </div>
-      </motion.div>
-                    )}
                       </div>
+                    )}
+                  </div>
+
+                  {/* Password Change Section - Dropdown Menu */}
+                  <div className="space-y-4">
+                    <div
+                      className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-muted/30 transition-colors"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <Lock className="w-5 h-5 text-muted-foreground" />
+                        <div>
+                          <Label className="text-base font-medium cursor-pointer">
+                            Password
+                          </Label>
+                          <p className="text-sm text-muted-foreground">
+                            Change your account password
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm text-muted-foreground">
+                          ••••••••
+                        </span>
+                        {showPassword ? (
+                          <ChevronUp className="w-4 h-4 text-muted-foreground transition-transform" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4 text-muted-foreground transition-transform" />
+                        )}
+                      </div>
+                    </div>
+
+                    <AnimatePresence>
+                      {showPassword && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0, y: -10 }}
+                          animate={{ opacity: 1, height: "auto", y: 0 }}
+                          exit={{ opacity: 0, height: 0, y: -10 }}
+                          transition={{ duration: 0.2, ease: "easeInOut" }}
+                          className="overflow-hidden"
+                        >
+                          <div className="space-y-4 p-4 border rounded-lg bg-muted/30 border-t-0 rounded-t-none">
+                            <div className="space-y-2">
+                              <Label htmlFor="oldPassword">
+                                Current Password
+                              </Label>
+                              <div className="relative">
+                                <Input
+                                  id="oldPassword"
+                                  type={showOldPassword ? "text" : "password"}
+                                  placeholder="Enter current password"
+                                  value={passwordData.oldPassword}
+                                  onChange={(e) =>
+                                    setPasswordData({
+                                      ...passwordData,
+                                      oldPassword: e.target.value,
+                                    })
+                                  }
+                                />
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                                  onClick={() =>
+                                    setShowOldPassword(!showOldPassword)
+                                  }
+                                >
+                                  {showOldPassword ? (
+                                    <EyeOff className="h-4 w-4" />
+                                  ) : (
+                                    <Eye className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              </div>
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label htmlFor="newPassword">New Password</Label>
+                              <div className="relative">
+                                <Input
+                                  id="newPassword"
+                                  type={showNewPassword ? "text" : "password"}
+                                  placeholder="Enter new password"
+                                  value={passwordData.newPassword}
+                                  onChange={(e) =>
+                                    setPasswordData({
+                                      ...passwordData,
+                                      newPassword: e.target.value,
+                                    })
+                                  }
+                                />
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                                  onClick={() =>
+                                    setShowNewPassword(!showNewPassword)
+                                  }
+                                >
+                                  {showNewPassword ? (
+                                    <EyeOff className="h-4 w-4" />
+                                  ) : (
+                                    <Eye className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              </div>
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label htmlFor="confirmPassword">
+                                Confirm New Password
+                              </Label>
+                              <div className="relative">
+                                <Input
+                                  id="confirmPassword"
+                                  type={
+                                    showConfirmPassword ? "text" : "password"
+                                  }
+                                  placeholder="Confirm new password"
+                                  value={passwordData.confirmPassword}
+                                  onChange={(e) =>
+                                    setPasswordData({
+                                      ...passwordData,
+                                      confirmPassword: e.target.value,
+                                    })
+                                  }
+                                />
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                                  onClick={() =>
+                                    setShowConfirmPassword(!showConfirmPassword)
+                                  }
+                                >
+                                  {showConfirmPassword ? (
+                                    <EyeOff className="h-4 w-4" />
+                                  ) : (
+                                    <Eye className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              </div>
+                            </div>
+
+                            <div className="flex space-x-2 pt-2">
+                              <Button
+                                onClick={changePassword}
+                                className="flex-1"
+                              >
+                                Update Password
+                              </Button>
+                              <Button
+                                variant="outline"
+                                onClick={resetPasswordForm}
+                                className="flex-1"
+                              >
+                                Reset
+                              </Button>
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
 
                   {/* Actions */}
                   <div className="flex space-x-2 pt-4 border-t">
-                          <Button
-                            variant="outline"
-                            onClick={() => {
+                    <Button
+                      variant="outline"
+                      onClick={() => {
                         // Handle edit profile
                         console.log("Edit profile clicked");
                       }}
-                            className="flex-1"
-                          >
-                            <Settings className="w-4 h-4 mr-2" />
-                            Edit Profile
-                          </Button>
-                          <Button
-                            variant="outline"
-                            onClick={() => {
+                      className="flex-1"
+                    >
+                      <Settings className="w-4 h-4 mr-2" />
+                      Edit Profile
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
                         // Handle sign out
                         console.log("Sign out clicked");
                       }}
-                            className="flex-1"
-                          >
+                      className="flex-1"
+                    >
                       <LogOut className="w-4 h-4 mr-2" />
                       Sign Out
-                          </Button>
-                        </div>
-                            </CardContent>
-                          </Card>
-      </motion.div>
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
           </>
         )}
       </AnimatePresence>

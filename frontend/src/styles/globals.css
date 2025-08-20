@@ -137,16 +137,16 @@
 
 /* Additional specificity for dark theme */
 html.dark {
-  --background: #181c14 !important;
+  --background: #222222 !important;
   --foreground: #ffffff !important;
-  --card: #181c14 !important;
+  --card: #222222 !important;
   --card-foreground: #ffffff !important;
 }
 
 body.dark {
-  --background: #181c14 !important;
+  --background: #222222 !important;
   --foreground: #ffffff !important;
-  --card: #181c14 !important;
+  --card: #222222 !important;
   --card-foreground: #ffffff !important;
 }
 

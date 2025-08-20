@@ -4,108 +4,140 @@ import {
   MapPin,
   Clock,
   Users,
-  ArrowLeft,
   ChevronLeft,
   ChevronRight,
-  Camera,
   BookOpen,
   Video,
   Mic,
+  Plus,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "../../design/system/button";
 import { Layout } from "../../components/layout/Layout";
-import { SpotlightHero } from "../../components/shared/SpotlightHero";
 import { useState } from "react";
 import { useTheme } from "../../core/contexts/ThemeContext";
+import {
+  EventSubmissionForm,
+  EventDetails,
+} from "../../components/features/events";
 
 export default function CommunityEvents() {
   const { isDarkMode, colors } = useTheme();
   const [currentMonth, setCurrentMonth] = useState(new Date(2024, 11, 1)); // December 2024
   const [viewMode, setViewMode] = useState<"month" | "week" | "day">("week");
 
+  // State for event form
+  const [showEventForm, setShowEventForm] = useState(false);
+
+  // State for event details
+  const [selectedEvent, setSelectedEvent] = useState<any>(null);
+  const [showEventDetails, setShowEventDetails] = useState(false);
+
   const events = [
     {
       id: 1,
-      title: "pinequest",
+      title: "React Performance Workshop",
       startTime: "09:00",
-      endTime: "10:30",
-      date: new Date(2024, 11, 4), // December 4th
-      endDate: new Date(2024, 11, 4), // Single day event
-      type: "Blog Post",
-      status: "Published",
+      endTime: "11:00",
+      date: new Date(), // Today
+      endDate: new Date(), // Single day event
+      type: "Workshop",
+      status: "Open",
       icon: BookOpen,
-      description: "How to create engaging content for developers",
+      description:
+        "Learn advanced React optimization techniques and performance best practices",
       location: "Online",
-      attendees: 45,
-      category: "Content",
+      attendees: 28,
+      category: "Learning",
       color: "bg-blue-500",
     },
     {
       id: 2,
-      title: "demo",
+      title: "System Design Interview Prep",
       startTime: "14:00",
-      endTime: "15:00",
-      date: new Date(2024, 11, 7), // December 7th
-      endDate: new Date(2024, 11, 7), // Single day event
-      type: "Video",
-      status: "In Review",
-      icon: Video,
-      description: "Live coding session: Building a React app",
-      location: "Online",
-      attendees: 23,
-      category: "Workshop",
-      color: "bg-orange-500",
+      endTime: "15:30",
+      date: new Date(), // Today
+      endDate: new Date(), // Single day event
+      type: "Study Group",
+      status: "Almost Full",
+      icon: Users,
+      description: "Practice system design problems with experienced engineers",
+      location: "Conference Room A",
+      attendees: 18,
+      category: "Career",
+      color: "bg-green-500",
     },
     {
       id: 3,
-      title: "teachers day",
-      startTime: "10:00",
-      endTime: "12:00",
-      date: new Date(2024, 11, 10), // December 10th
-      endDate: new Date(2024, 11, 10), // Single day event
-      type: "Event",
-      status: "Scheduled",
-      icon: Calendar,
-      description: "Annual celebration and recognition of educators",
-      location: "Main Campus",
-      attendees: 120,
-      category: "Event",
-      color: "bg-[#08CB00]",
-    },
-    {
-      id: 4,
-      title: "how to leap",
+      title: "Data Science Q&A Session",
       startTime: "16:00",
-      endTime: "17:30",
-      date: new Date(2024, 11, 13), // December 13th
-      endDate: new Date(2024, 11, 14), // Two day event
-      type: "Podcast",
-      status: "Idea",
-      icon: Mic,
-      description: "Career advancement strategies for developers",
+      endTime: "17:00",
+      date: new Date(), // Today
+      endDate: new Date(), // Single day event
+      type: "Q&A",
+      status: "Open",
+      icon: Video,
+      description:
+        "Get answers to your data science and ML questions from experts",
       location: "Online",
-      attendees: 67,
-      category: "Learning",
+      attendees: 35,
+      category: "Data Science",
       color: "bg-purple-500",
     },
     {
-      id: 5,
-      title: "group study session",
+      id: 4,
+      title: "Frontend Architecture Discussion",
       startTime: "19:00",
+      endTime: "20:30",
+      date: new Date(), // Today
+      endDate: new Date(), // Single day event
+      type: "Discussion",
+      status: "Open",
+      icon: Mic,
+      description:
+        "Deep dive into modern frontend architecture patterns and decisions",
+      location: "Online",
+      attendees: 22,
+      category: "Architecture",
+      color: "bg-orange-500",
+    },
+    {
+      id: 5,
+      title: "Code Review Best Practices",
+      startTime: "20:00",
       endTime: "21:00",
-      date: new Date(2024, 11, 15), // December 15th
-      endDate: new Date(2024, 11, 15), // Single day event
+      date: new Date(), // Today
+      endDate: new Date(), // Single day event
       type: "Workshop",
-      status: "In Progress",
-      icon: Users,
-      description: "Collaborative learning session on advanced topics",
-      location: "Study Hall",
+      status: "Open",
+      icon: BookOpen,
+      description:
+        "Learn effective code review techniques and feedback strategies",
+      location: "Online",
       attendees: 15,
-      category: "Learning",
+      category: "Best Practices",
       color: "bg-indigo-500",
     },
   ];
+
+  // Handler for event submission
+  const handleEventSubmit = (newEvent: any) => {
+    // TODO: Implement event submission logic
+    console.log("New event submitted:", newEvent);
+    setShowEventForm(false);
+  };
+
+  // Handler for opening event details
+  const handleEventClick = (event: any) => {
+    setSelectedEvent(event);
+    setShowEventDetails(true);
+  };
+
+  // Handler for closing event details
+  const handleCloseEventDetails = () => {
+    setShowEventDetails(false);
+    setSelectedEvent(null);
+  };
 
   const getDaysInMonth = (date: Date) => {
     const year = date.getFullYear();
@@ -191,17 +223,16 @@ export default function CommunityEvents() {
     const weekDays = getWeekDays();
     const days = [];
 
-    // Add empty cells for days before the first day of the month
     for (let i = 0; i < startingDayOfWeek; i++) {
       days.push(
         <div
           key={`empty-${i}`}
-          className="h-20 bg-gray-50 dark:bg-gray-800"
+          className="h-20"
+          style={{ backgroundColor: colors.background.secondary }}
         ></div>
       );
     }
 
-    // Add cells for each day of the month
     for (let day = 1; day <= daysInMonth; day++) {
       const currentDate = new Date(
         currentMonth.getFullYear(),
@@ -214,27 +245,36 @@ export default function CommunityEvents() {
       days.push(
         <div
           key={day}
-          className={`h-20 border border-gray-200 dark:border-gray-700 p-1.5 ${
-            isToday
-              ? "bg-blue-50 dark:bg-blue-900/20"
-              : "bg-white dark:bg-gray-900"
-          }`}
+          className={`h-20 border p-1.5 transition-all duration-200 hover:shadow-md`}
+          style={{
+            borderColor: colors.border.primary,
+            backgroundColor: isToday
+              ? `${colors.accent.primary}20`
+              : colors.background.card,
+          }}
         >
-          <div className="text-sm font-medium text-gray-900 dark:text-white mb-1">
+          <div
+            className="mb-1 text-sm font-medium"
+            style={{ color: colors.text.primary }}
+          >
             {day}
           </div>
           <div className="space-y-0.5">
             {dayEvents.slice(0, 2).map((event) => (
               <div
                 key={event.id}
-                className={`text-xs p-0.5 rounded ${event.color} text-white truncate`}
+                className={`text-xs p-0.5 rounded ${event.color} text-white truncate cursor-pointer hover:opacity-80 transition-opacity`}
                 title={event.title}
+                onClick={() => handleEventClick(event)}
               >
                 {event.title}
               </div>
             ))}
             {dayEvents.length > 2 && (
-              <div className="text-xs text-gray-500 dark:text-gray-400">
+              <div
+                className="text-xs cursor-pointer hover:underline"
+                style={{ color: colors.text.tertiary }}
+              >
                 +{dayEvents.length - 2} more
               </div>
             )}
@@ -244,12 +284,25 @@ export default function CommunityEvents() {
     }
 
     return (
-      <div className="bg-white dark:bg-gray-900 rounded-lg shadow">
-        <div className="grid grid-cols-7 gap-px bg-gray-200 dark:bg-gray-700">
+      <div
+        className="rounded-lg shadow-lg overflow-hidden"
+        style={{
+          backgroundColor: colors.background.card,
+          borderColor: colors.border.primary,
+        }}
+      >
+        <div
+          className="grid grid-cols-7 gap-px"
+          style={{ backgroundColor: colors.border.primary }}
+        >
           {weekDays.map((day) => (
             <div
               key={day}
-              className="bg-gray-50 dark:bg-gray-800 p-3 text-center text-sm font-medium text-gray-900 dark:text-white"
+              className="p-3 text-sm font-medium text-center"
+              style={{
+                backgroundColor: colors.background.secondary,
+                color: colors.text.primary,
+              }}
             >
               {day}
             </div>
@@ -269,9 +322,17 @@ export default function CommunityEvents() {
     const weekEvents = getEventsForWeek(startOfWeek);
 
     return (
-      <div className="bg-white dark:bg-gray-900 rounded-lg shadow">
-        <div className="grid grid-cols-7 gap-px bg-gray-200 dark:bg-gray-700">
-          {/* Day headers */}
+      <div
+        className="rounded-lg shadow-lg overflow-hidden"
+        style={{
+          backgroundColor: colors.background.card,
+          borderColor: colors.border.primary,
+        }}
+      >
+        <div
+          className="grid grid-cols-7 gap-px"
+          style={{ backgroundColor: colors.border.primary }}
+        >
           {weekDays.map((day, index) => {
             const date = new Date(startOfWeek);
             date.setDate(startOfWeek.getDate() + index);
@@ -283,38 +344,43 @@ export default function CommunityEvents() {
             return (
               <div
                 key={day}
-                className={`min-h-[200px] ${
-                  isToday
-                    ? "bg-blue-50 dark:bg-blue-900/20"
-                    : "bg-white dark:bg-gray-900"
-                }`}
+                className="min-h-[200px] transition-all duration-200"
+                style={{
+                  backgroundColor: isToday
+                    ? `${colors.accent.primary}20`
+                    : colors.background.card,
+                }}
               >
-                {/* Day header */}
                 <div
-                  className={`p-3 text-center border-b border-gray-200 dark:border-gray-700 ${
-                    isToday
-                      ? "bg-blue-100 dark:bg-blue-900/30"
-                      : "bg-gray-50 dark:bg-gray-800"
-                  }`}
+                  className={`p-3 text-center border-b transition-all duration-200`}
+                  style={{
+                    borderColor: colors.border.primary,
+                    backgroundColor: isToday
+                      ? `${colors.accent.primary}30`
+                      : colors.background.secondary,
+                  }}
                 >
-                  <div className="text-gray-900 dark:text-white font-medium">
+                  <div
+                    className="font-medium"
+                    style={{ color: colors.text.primary }}
+                  >
                     {day}
                   </div>
                   <div
                     className={`text-sm ${
-                      isToday
-                        ? "text-blue-600 dark:text-blue-400"
-                        : "text-gray-500 dark:text-gray-400"
+                      isToday ? colors.accent.primary : colors.text.tertiary
                     }`}
                   >
                     {date.getDate()}
                   </div>
                 </div>
 
-                {/* Events for this day */}
                 <div className="p-2">
                   {dayEvents.length === 0 ? (
-                    <div className="text-center py-8 text-gray-400 dark:text-gray-500 text-sm">
+                    <div
+                      className="py-8 text-sm text-center"
+                      style={{ color: colors.text.tertiary }}
+                    >
                       No events
                     </div>
                   ) : (
@@ -322,13 +388,14 @@ export default function CommunityEvents() {
                       {dayEvents.map((event) => (
                         <div
                           key={event.id}
-                          className={`p-2 rounded-lg ${event.color} text-white text-xs`}
+                          className={`p-2 rounded-lg ${event.color} text-white text-xs cursor-pointer hover:opacity-80 transition-opacity`}
+                          onClick={() => handleEventClick(event)}
                         >
-                          <div className="font-medium mb-1">{event.title}</div>
+                          <div className="mb-1 font-medium">{event.title}</div>
                           <div className="text-white/80">
                             {event.startTime} - {event.endTime}
                           </div>
-                          <div className="text-white/70 text-xs mt-1">
+                          <div className="mt-1 text-xs text-white/70">
                             {event.location}
                           </div>
                         </div>
@@ -351,16 +418,31 @@ export default function CommunityEvents() {
     const currentDay = weekDays[today.getDay()];
 
     return (
-      <div className="bg-white dark:bg-gray-900 rounded-lg shadow">
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-          <div className="text-lg font-semibold text-gray-900 dark:text-white">
+      <div
+        className="rounded-lg shadow-lg overflow-hidden"
+        style={{
+          backgroundColor: colors.background.card,
+          borderColor: colors.border.primary,
+        }}
+      >
+        <div
+          className="p-4 border-b"
+          style={{ borderColor: colors.border.primary }}
+        >
+          <div
+            className="text-lg font-semibold"
+            style={{ color: colors.text.primary }}
+          >
             {currentDay}, {today.toLocaleDateString()}
           </div>
         </div>
 
         <div className="p-4">
           {dayEvents.length === 0 ? (
-            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+            <div
+              className="py-8 text-center"
+              style={{ color: colors.text.tertiary }}
+            >
               No events scheduled for today
             </div>
           ) : (
@@ -368,34 +450,58 @@ export default function CommunityEvents() {
               {dayEvents.map((event) => (
                 <div
                   key={event.id}
-                  className={`p-4 rounded-lg border-l-4 ${
-                    event.color
-                  } border-l-${
-                    event.color.split("-")[1]
-                  }-600 bg-white dark:bg-gray-800 shadow-sm`}
+                  className={`p-4 rounded-lg border-l-4 shadow-sm transition-all duration-200 hover:shadow-md cursor-pointer`}
+                  style={{
+                    borderLeftColor:
+                      event.color.split("-")[1] === "08CB00"
+                        ? "#08CB00"
+                        : event.color.split("-")[1],
+                    backgroundColor: colors.background.card,
+                    borderColor: colors.border.primary,
+                  }}
+                  onClick={() => handleEventClick(event)}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                      <h3
+                        className="mb-2 text-lg font-semibold"
+                        style={{ color: colors.text.primary }}
+                      >
                         {event.title}
                       </h3>
-                      <p className="text-gray-600 dark:text-gray-300 mb-3">
+                      <p
+                        className="mb-3"
+                        style={{ color: colors.text.secondary }}
+                      >
                         {event.description}
                       </p>
-                      <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
+                      <div className="flex items-center space-x-4 text-sm">
                         <div className="flex items-center space-x-1">
-                          <Clock className="w-4 h-4" />
-                          <span>
+                          <Clock
+                            className="w-4 h-4"
+                            style={{ color: colors.text.tertiary }}
+                          />
+                          <span style={{ color: colors.text.tertiary }}>
                             {event.startTime} - {event.endTime}
                           </span>
                         </div>
                         <div className="flex items-center space-x-1">
-                          <MapPin className="w-4 h-4" />
-                          <span>{event.location}</span>
+                          <MapPin
+                            className="w-4 h-4"
+                            style={{ color: colors.text.tertiary }}
+                          />
+                          <span style={{ color: colors.text.tertiary }}>
+                            {event.location}
+                          </span>
                         </div>
                         <div className="flex items-center space-x-1">
-                          <Users className="w-4 h-4" />
-                          <span>{event.attendees} attendees</span>
+                          <Users
+                            className="w-4 h-4"
+                            style={{ color: colors.text.tertiary }}
+                          />
+                          <span style={{ color: colors.text.tertiary }}>
+                            {event.attendees} attendees
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -418,73 +524,149 @@ export default function CommunityEvents() {
 
   return (
     <Layout>
-      <SpotlightHero
-        title="EVENTS"
-        subtitle="IN THE"
-        description="Stay updated with all community activities and events. Join workshops, attend meetups, and participate in learning sessions."
-        quote="THE BEST WAY TO PREDICT THE FUTURE IS TO CREATE IT."
-        author="Peter Drucker"
-      />
+      {/* Compact Events Header */}
+      <div className="pt-20">
+        <div className="px-4 py-6 mx-auto max-w-7xl sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-3">
+                <Calendar
+                  className="w-8 h-8"
+                  style={{ color: colors.accent.primary }}
+                />
+                <div>
+                  <h1
+                    className="text-3xl font-bold"
+                    style={{ color: colors.text.primary }}
+                  >
+                    Events
+                  </h1>
+                  <p
+                    className="text-sm"
+                    style={{ color: colors.text.secondary }}
+                  >
+                    Manage and view community events
+                  </p>
+                </div>
+              </div>
+            </div>
 
-      <div className="pt-24">
-        <div className="px-4 py-8 mx-auto max-w-7xl sm:px-6 lg:px-8">
-          {/* Calendar Controls */}
-          <div className="mb-4 bg-white dark:bg-gray-900 rounded-lg shadow p-3">
+            <Button
+              onClick={() => setShowEventForm(true)}
+              className="px-6 py-3 bg-gradient-to-r from-[var(--pico-primary)] to-[var(--pico-secondary)] text-white border-0 hover:shadow-lg transition-all duration-300"
+            >
+              <Plus className="w-5 h-5 mr-2" />
+              Add Event
+            </Button>
+          </div>
+
+          <div
+            className="p-4 rounded-lg shadow-lg"
+            style={{
+              backgroundColor: colors.background.card,
+              borderColor: colors.border.primary,
+            }}
+          >
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
-                <Button onClick={goToToday} variant="outline">
+                <Button
+                  onClick={goToToday}
+                  variant="outline"
+                  className="hover:shadow-md transition-all duration-300"
+                  style={{
+                    borderColor: colors.border.primary,
+                    color: colors.text.primary,
+                    backgroundColor: `${colors.accent.primary}10`,
+                  }}
+                >
                   Today
                 </Button>
                 <div className="flex items-center space-x-2">
-                  <Button onClick={goToPreviousMonth} variant="ghost" size="sm">
+                  <Button
+                    onClick={goToPreviousMonth}
+                    variant="ghost"
+                    size="sm"
+                    className="hover:bg-opacity-10 transition-all duration-200"
+                    style={{
+                      color: colors.text.primary,
+                      backgroundColor: `${colors.accent.primary}10`,
+                    }}
+                  >
                     <ChevronLeft className="w-4 h-4" />
                   </Button>
-                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                  <h2
+                    className="text-xl font-semibold"
+                    style={{ color: colors.text.primary }}
+                  >
                     {getMonthName(currentMonth)} {getYear(currentMonth)}
                   </h2>
-                  <Button onClick={goToNextMonth} variant="ghost" size="sm">
+                  <Button
+                    onClick={goToNextMonth}
+                    variant="ghost"
+                    size="sm"
+                    className="hover:bg-opacity-10 transition-all duration-200"
+                    style={{
+                      color: colors.text.primary,
+                      backgroundColor: `${colors.accent.primary}10`,
+                    }}
+                  >
                     <ChevronRight className="w-4 h-4" />
                   </Button>
                 </div>
               </div>
 
               <div className="flex items-center space-x-2">
-                <Button
-                  onClick={() => setViewMode("month")}
-                  variant={viewMode === "month" ? "default" : "outline"}
-                  size="sm"
-                >
-                  Month
-                </Button>
-                <Button
-                  onClick={() => setViewMode("week")}
-                  variant={viewMode === "week" ? "default" : "outline"}
-                  size="sm"
-                >
-                  Week
-                </Button>
-                <Button
-                  onClick={() => setViewMode("day")}
-                  variant={viewMode === "day" ? "default" : "outline"}
-                  size="sm"
-                >
-                  Day
-                </Button>
+                {[
+                  { key: "month", label: "Month" },
+                  { key: "week", label: "Week" },
+                  { key: "day", label: "Day" },
+                ].map(({ key, label }) => (
+                  <Button
+                    key={key}
+                    onClick={() => setViewMode(key as any)}
+                    variant={viewMode === key ? "default" : "outline"}
+                    size="sm"
+                    className="transition-all duration-300"
+                    style={{
+                      backgroundColor:
+                        viewMode === key
+                          ? colors.accent.primary
+                          : "transparent",
+                      color:
+                        viewMode === key
+                          ? colors.text.inverse
+                          : colors.text.primary,
+                      borderColor: colors.border.primary,
+                    }}
+                  >
+                    {label}
+                  </Button>
+                ))}
               </div>
             </div>
           </div>
 
-          {/* Calendar View */}
           <div className="mb-6">
             {viewMode === "month" && renderMonthView()}
             {viewMode === "week" && renderWeekView()}
             {viewMode === "day" && renderDayView()}
           </div>
 
-          {/* Upcoming Events List */}
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow">
-            <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-              <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+          <div
+            className="rounded-lg shadow-lg overflow-hidden"
+            style={{
+              backgroundColor: colors.background.card,
+              borderColor: colors.border.primary,
+            }}
+          >
+            <div
+              className="p-4 border-b"
+              style={{ borderColor: colors.border.primary }}
+            >
+              <h3
+                className="text-base font-semibold"
+                style={{ color: colors.text.primary }}
+              >
                 Upcoming Events
               </h3>
             </div>
@@ -497,7 +679,12 @@ export default function CommunityEvents() {
                   .map((event) => (
                     <div
                       key={event.id}
-                      className="flex items-center space-x-3 p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                      className="flex items-center p-3 space-x-3 transition-all duration-200 border rounded-lg hover:shadow-md cursor-pointer"
+                      style={{
+                        borderColor: colors.border.primary,
+                        backgroundColor: colors.background.card,
+                      }}
+                      onClick={() => handleEventClick(event)}
                     >
                       <div
                         className={`p-2 rounded-full ${event.color} text-white`}
@@ -505,25 +692,41 @@ export default function CommunityEvents() {
                         <event.icon className="w-4 h-4" />
                       </div>
                       <div className="flex-1">
-                        <h4 className="text-base font-medium text-gray-900 dark:text-white">
+                        <h4
+                          className="text-base font-medium"
+                          style={{ color: colors.text.primary }}
+                        >
                           {event.title}
                         </h4>
-                        <p className="text-gray-600 dark:text-gray-400 text-xs line-clamp-2">
+                        <p
+                          className="text-xs line-clamp-2"
+                          style={{ color: colors.text.secondary }}
+                        >
                           {event.description}
                         </p>
-                        <div className="flex items-center space-x-3 mt-1 text-xs text-gray-500 dark:text-gray-400">
-                          <span>{event.date.toLocaleDateString()}</span>
-                          <span>
+                        <div className="flex items-center mt-1 space-x-3 text-xs">
+                          <span style={{ color: colors.text.tertiary }}>
+                            {event.date.toLocaleDateString()}
+                          </span>
+                          <span style={{ color: colors.text.tertiary }}>
                             {event.startTime} - {event.endTime}
                           </span>
-                          <span>{event.location}</span>
+                          <span style={{ color: colors.text.tertiary }}>
+                            {event.location}
+                          </span>
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="text-xs font-medium text-gray-900 dark:text-white">
+                        <div
+                          className="text-xs font-medium"
+                          style={{ color: colors.text.primary }}
+                        >
                           {event.status}
                         </div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                        <div
+                          className="text-xs"
+                          style={{ color: colors.text.tertiary }}
+                        >
                           {event.category}
                         </div>
                       </div>
@@ -534,6 +737,22 @@ export default function CommunityEvents() {
           </div>
         </div>
       </div>
+
+      {/* Event Submission Form */}
+      <EventSubmissionForm
+        isOpen={showEventForm}
+        onClose={() => setShowEventForm(false)}
+        onSubmit={handleEventSubmit}
+      />
+
+      {/* Event Details Modal */}
+      {selectedEvent && (
+        <EventDetails
+          event={selectedEvent}
+          isOpen={showEventDetails}
+          onClose={handleCloseEventDetails}
+        />
+      )}
     </Layout>
   );
 }

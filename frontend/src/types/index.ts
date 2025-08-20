@@ -1,4 +1,3 @@
-// Core application types
 export interface User {
   id: string;
   email: string;
@@ -105,7 +104,6 @@ export interface Comment {
   createdAt: Date;
 }
 
-// UI Component Props
 export interface ButtonProps {
   variant?:
     | "default"
@@ -135,7 +133,6 @@ export interface ModalProps {
   title?: string;
 }
 
-// Form types
 export interface FormField {
   name: string;
   label: string;
@@ -159,7 +156,6 @@ export interface ValidationRule {
   message: string;
 }
 
-// API Response types
 export interface ApiResponse<T> {
   success: boolean;
   data?: T;
@@ -175,7 +171,6 @@ export interface PaginatedResponse<T> {
   totalPages: number;
 }
 
-// Theme types
 export interface ThemeColors {
   background: {
     primary: string;
@@ -205,7 +200,6 @@ export interface ThemeContextType {
   colors: ThemeColors;
 }
 
-// Navigation types
 export interface NavigationItem {
   id: string;
   name: string;
@@ -214,7 +208,6 @@ export interface NavigationItem {
   children?: NavigationItem[];
 }
 
-// Dashboard types
 export interface DashboardStats {
   totalSessions: number;
   completedSessions: number;
@@ -231,7 +224,6 @@ export interface DashboardWidget {
   position: { x: number; y: number };
 }
 
-// Session types
 export interface SessionFilters {
   subject?: string;
   status?: string;
@@ -248,7 +240,6 @@ export interface SessionBooking {
   notes?: string;
 }
 
-// Mentor types
 export interface MentorFilters {
   subject?: string;
   rating?: number;
@@ -266,14 +257,12 @@ export interface MentorSearchParams {
   limit?: number;
 }
 
-// Community types
 export interface CommunityFilters {
   category?: string;
   memberCount?: number;
   activity?: string;
 }
 
-// Utility types
 export type Status = "idle" | "loading" | "success" | "error";
 
 export interface LoadingState {
@@ -282,7 +271,6 @@ export interface LoadingState {
   error?: string;
 }
 
-// Event types
 export interface CalendarEvent {
   id: string;
   title: string;
@@ -292,7 +280,6 @@ export interface CalendarEvent {
   color?: string;
 }
 
-// Notification types
 export interface Notification {
   id: string;
   type: "info" | "success" | "warning" | "error";
@@ -303,7 +290,6 @@ export interface Notification {
   actionUrl?: string;
 }
 
-// Search types
 export interface SearchResult<T> {
   items: T[];
   total: number;
@@ -311,7 +297,6 @@ export interface SearchResult<T> {
   filters: Record<string, any>;
 }
 
-// File types
 export interface FileUpload {
   id: string;
   name: string;
@@ -320,8 +305,6 @@ export interface FileUpload {
   url: string;
   uploadedAt: Date;
 }
-
-// Payment types
 export interface Payment {
   id: string;
   amount: number;
@@ -332,7 +315,6 @@ export interface Payment {
   createdAt: Date;
 }
 
-// Settings types
 export interface UserSettings {
   id: string;
   userId: string;

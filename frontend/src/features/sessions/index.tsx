@@ -8,7 +8,7 @@ import { Card, CardContent } from "../../design/system/card";
 import { Button } from "../../design/system/button";
 import { Layout } from "../../components/layout/Layout";
 import { TopicSubmissionForm } from "../../components/features/group-sessions/TopicSubmissionForm";
-import { TopicVoting } from "../../components/features/group-sessions/TopicVoting";
+import TopicVoting from "../../components/features/group-sessions/TopicVoting";
 import { Plus, Target, Users, Calendar, Lightbulb } from "lucide-react";
 import {
   TopicSubmission,
@@ -166,6 +166,18 @@ export default function GroupSessionsPage() {
     if (typeof window !== "undefined") {
       localStorage.setItem("group-votes", JSON.stringify(updatedVotes));
     }
+  };
+
+  const getVoteCount = (topicId: string, voteType: "upvote" | "downvote") => {
+    return votes.filter((v) => v.topicId === topicId && v.vote === voteType)
+      .length;
+  };
+
+  const getUserVote = (topicId: string) => {
+    const userVote = votes.find(
+      (v) => v.topicId === topicId && v.studentId === "current-student"
+    );
+    return userVote ? userVote.vote : null;
   };
 
   const textColor = isDarkMode ? "text-white" : "text-black";
@@ -383,7 +395,12 @@ export default function GroupSessionsPage() {
           {/* Tab Content */}
           <div>
             {activeTab === "topics" ? (
-              <TopicVoting topics={topics} votes={votes} onVote={handleVote} />
+              <TopicVoting
+                topics={topics}
+                onVote={handleVote}
+                getVoteCount={getVoteCount}
+                getUserVote={getUserVote}
+              />
             ) : (
               <div className="text-center py-12">
                 <Users

@@ -45,7 +45,10 @@ const MentorsPage = () => {
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <div className="pt-24">
+      <div
+        className="pt-24 min-h-screen"
+        style={{ backgroundColor: colors.background.primary }}
+      >
         <div className="px-4 py-24 mx-auto max-w-7xl sm:px-6 lg:px-8">
           {/* Section Header */}
           <div className="mb-16 text-center">
@@ -54,11 +57,9 @@ const MentorsPage = () => {
               style={{ color: colors.text.primary }}
             >
               Find Your Perfect
-              <span className="block text-[#08CB00]">
-                Mentor
-              </span>
+              <span className="block text-[#08CB00]">Mentor</span>
             </h1>
-            <p 
+            <p
               className="max-w-2xl mx-auto text-lg"
               style={{ color: colors.text.secondary }}
             >
@@ -73,8 +74,12 @@ const MentorsPage = () => {
               <div
                 className="w-full p-6 border-0 shadow-lg transition-all duration-200 rounded-3xl"
                 style={{
-                  backgroundColor: isDarkMode ? colors.background.tertiary : colors.background.primary,
-                  border: `1px solid ${isDarkMode ? colors.border.primary : colors.border.secondary}`,
+                  backgroundColor: isDarkMode
+                    ? colors.background.tertiary
+                    : colors.background.primary,
+                  border: `1px solid ${
+                    isDarkMode ? colors.border.primary : colors.border.secondary
+                  }`,
                 }}
               >
                 <div className="space-y-8">

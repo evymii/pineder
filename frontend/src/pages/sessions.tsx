@@ -1,271 +1,368 @@
 import { useState, useEffect } from "react";
 import Head from "next/head";
-import Link from "next/link";
 import { motion } from "framer-motion";
 import { useTheme } from "../core/contexts/ThemeContext";
-import { Card, CardContent } from "../design/system/card";
-import { Button } from "../design/system/button";
-import { Badge } from "../design/system/badge";
 import { Layout } from "../components/layout/Layout";
-import { TopicSubmissionForm } from "../components/features/group-sessions/TopicSubmissionForm";
-import { TopicVoting } from "../components/features/group-sessions/TopicVoting";
-import { SpotlightHero } from "../components/shared/SpotlightHero";
-import { Plus, Target, Users, Calendar, Lightbulb } from "lucide-react";
 import {
-  TopicSubmission,
-  GroupSession,
-  TopicVote,
-  mockTopicSubmissions,
-  mockGroupSessions,
-  mockTopicVotes,
-} from "../core/lib/data/groupSessions";
+  SessionTabs,
+  SessionGrid,
+  GoogleCalendarSection,
+  EmptyStateCard,
+  RescheduleDialog,
+  RatingDialog,
+  CustomFooter,
+} from "../components/features/sessions";
+import { mentorCategories } from "../core/lib/data/mentors";
 
-export default function GroupSessionsPage() {
-  const { isDarkMode, colors } = useTheme();
-  const [topics, setTopics] = useState<TopicSubmission[]>([]);
-  const [groupSessions, setGroupSessions] = useState<GroupSession[]>([]);
-  const [votes, setVotes] = useState<TopicVote[]>([]);
-  const [showTopicForm, setShowTopicForm] = useState(false);
-  const [activeTab, setActiveTab] = useState<"topics" | "sessions">("topics");
+interface SessionData {
+  id: string;
+  title: string;
+  mentor: {
+    name: string;
+    image: string;
+    expertise: string[];
+    rating: number;
+  };
+  date: string;
+  time: string;
+  status: "upcoming" | "completed" | "cancelled";
+  duration: string;
+  subject: string;
+  price: number;
+  studentChoice: "ice cream" | "coffee" | "free";
+  meetingLink?: string;
+}
+
+interface GroupSessionData {
+  id: string;
+  title: string;
+  mentor: {
+    name: string;
+    image: string;
+    expertise: string[];
+    rating: number;
+  };
+  date: string;
+  time: string;
+  status: "upcoming" | "completed" | "cancelled";
+  duration: string;
+  subject: string;
+  price: number;
+  studentChoice: "ice cream" | "coffee" | "free";
+  meetingLink?: string;
+  maxParticipants: number;
+  currentParticipants: number;
+  participants: string[];
+}
+
+type AnySession = SessionData | GroupSessionData;
+
+export default function SessionsPage() {
+  const { colors } = useTheme();
+  const [oneOnOneSessions, setOneOnOneSessions] = useState<SessionData[]>([]);
+  const [groupSessions, setGroupSessions] = useState<GroupSessionData[]>([]);
+  const [activeTab, setActiveTab] = useState<
+    "group" | "oneonone" | "all" | "calendar"
+  >("group");
+  const [showRescheduleDialog, setShowRescheduleDialog] = useState(false);
+  const [showRatingDialog, setShowRatingDialog] = useState(false);
+  const [selectedSession, setSelectedSession] = useState<
+    SessionData | GroupSessionData | null
+  >(null);
+  const [rescheduleReason, setRescheduleReason] = useState("");
+  const [rating, setRating] = useState(0);
+  const [ratingComment, setRatingComment] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const savedTopics = localStorage.getItem("group-topics");
-      const savedVotes = localStorage.getItem("group-votes");
-      const savedGroupSessions = localStorage.getItem("group-sessions");
+    const generateSessions = () => {
+      const allMentors = mentorCategories.flatMap(
+        (category) => category.mentors
+      );
 
-      if (savedTopics) {
-        setTopics(JSON.parse(savedTopics));
-      } else {
-        setTopics(mockTopicSubmissions);
-      }
-      if (savedVotes) {
-        setVotes(JSON.parse(savedVotes));
-      } else {
-        setVotes(mockTopicVotes);
-      }
-      if (savedGroupSessions) {
-        setGroupSessions(JSON.parse(savedGroupSessions));
-      } else {
-        setGroupSessions(mockGroupSessions);
-      }
-    }
+      // Generate 1 on 1 sessions (first 5 mentors)
+      const mockOneOnOneSessions: SessionData[] = [];
+      allMentors.forEach((mentor, index) => {
+        if (index < 5) {
+          mockOneOnOneSessions.push({
+            id: `oneonone-${index}`,
+            title: `${mentor.expertise[0]} 1-on-1 Session`,
+            mentor: {
+              name: mentor.name,
+              image: mentor.image,
+              expertise: mentor.expertise,
+              rating: mentor.rating,
+            },
+            date: mentor.availableTimes[0],
+            time: "2:00 PM",
+            status: "upcoming" as const,
+            duration: "1 hour",
+            subject: mentor.expertise[0],
+            price: 35 + index * 5,
+            studentChoice: ["coffee", "free", "ice cream"][index % 3] as
+              | "ice cream"
+              | "coffee"
+              | "free",
+            meetingLink: `https://zoom.us/j/${200000000 + index}`,
+          });
+        }
+      });
+
+      setOneOnOneSessions(mockOneOnOneSessions);
+
+      // Generate group sessions
+      const mockGroupSessions: GroupSessionData[] = [];
+      allMentors.forEach((mentor, index) => {
+        if (index < 6) {
+          mockGroupSessions.push({
+            id: `group-${index}`,
+            title: `${mentor.expertise[0]} Group Workshop`,
+            mentor: {
+              name: mentor.name,
+              image: mentor.image,
+              expertise: mentor.expertise,
+              rating: mentor.rating,
+            },
+            date: mentor.availableTimes[1] || "Tomorrow",
+            time: "4:00 PM",
+            status: "upcoming" as const,
+            duration: "2 hours",
+            subject: mentor.expertise[0],
+            price: 15 + index * 3,
+            studentChoice: ["free", "ice cream", "coffee"][index % 3] as
+              | "ice cream"
+              | "coffee"
+              | "free",
+            meetingLink: `https://zoom.us/j/${300000000 + index}`,
+            maxParticipants: 8,
+            currentParticipants: 3 + Math.floor(Math.random() * 4),
+            participants: ["You", "Student A", "Student B"],
+          });
+        }
+      });
+
+      setGroupSessions(mockGroupSessions);
+      setIsLoading(false);
+    };
+
+    generateSessions();
   }, []);
 
-  const handleTopicSubmit = (
-    topic: Omit<TopicSubmission, "id" | "submittedAt" | "status">
-  ) => {
-    const newTopic: TopicSubmission = {
-      ...topic,
-      id: Date.now().toString(),
-      submittedAt: new Date().toISOString(),
-      status: "pending",
-    };
-    const updatedTopics = [...topics, newTopic];
-    setTopics(updatedTopics);
+  const filteredOneOnOneSessions = oneOnOneSessions.filter((session) => {
+    if (activeTab === "all") return true;
+    if (activeTab === "oneonone") return session.status === "upcoming";
+    return false;
+  });
 
-    if (typeof window !== "undefined") {
-      localStorage.setItem("group-topics", JSON.stringify(updatedTopics));
-    }
+  const filteredGroupSessions = groupSessions.filter((session) => {
+    if (activeTab === "all") return true;
+    if (activeTab === "group") return true;
+    return false;
+  });
 
-    setShowTopicForm(false);
+  const stats = {
+    total: oneOnOneSessions.length + groupSessions.length,
+    oneonone: oneOnOneSessions.length,
+    group: groupSessions.length,
   };
 
-  const handleVote = (topicId: string, vote: "upvote" | "downvote") => {
-    const updatedVotes = [...votes];
-    const existingVoteIndex = updatedVotes.findIndex(
-      (v) => v.topicId === topicId && v.studentId === "current-student"
-    );
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "upcoming":
+        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
+      case "completed":
+        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
+      case "cancelled":
+        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
+      default:
+        return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
+    }
+  };
 
-    if (existingVoteIndex >= 0) {
-      updatedVotes[existingVoteIndex].vote = vote;
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "upcoming":
+        return <span className="w-4 h-4">⏰</span>;
+      case "completed":
+        return <span className="w-4 h-4">✅</span>;
+      case "cancelled":
+        return <span className="w-4 h-4">❌</span>;
+      default:
+        return <span className="w-4 h-4">🕐</span>;
+    }
+  };
+
+  const handleJoinSession = (session: SessionData | GroupSessionData) => {
+    if (session.meetingLink) {
+      window.open(session.meetingLink, "_blank");
     } else {
-      updatedVotes.push({
-        id: Date.now().toString(),
-        topicId,
-        studentId: "current-student",
-        studentName: "Current User",
-        vote,
-        createdAt: new Date().toISOString(),
-      });
-    }
-
-    setVotes(updatedVotes);
-
-    if (typeof window !== "undefined") {
-      localStorage.setItem("group-votes", JSON.stringify(updatedVotes));
+      alert("Meeting link not available yet.");
     }
   };
 
-  const getVoteCount = (topicId: string) => {
-    const topicVotes = votes.filter((v) => v.topicId === topicId);
-    const upvotes = topicVotes.filter((v) => v.vote === "upvote").length;
-    const downvotes = topicVotes.filter((v) => v.vote === "downvote").length;
-    return upvotes - downvotes;
+  const handleRequestReschedule = (session: SessionData | GroupSessionData) => {
+    setSelectedSession(session);
+    setShowRescheduleDialog(true);
   };
 
-  const sortedTopics = [...topics].sort(
-    (a, b) => getVoteCount(b.id) - getVoteCount(a.id)
-  );
+  const handleSubmitReschedule = () => {
+    if (rescheduleReason.trim()) {
+      setShowRescheduleDialog(false);
+      setRescheduleReason("");
+      setSelectedSession(null);
+    }
+  };
+
+  const handleRateSession = (session: SessionData | GroupSessionData) => {
+    setSelectedSession(session);
+    setShowRatingDialog(true);
+    setRating(0);
+    setRatingComment("");
+  };
+
+  const handleSubmitRating = () => {
+    if (rating > 0) {
+      setShowRatingDialog(false);
+      setRating(0);
+      setRatingComment("");
+      setSelectedSession(null);
+    }
+  };
+
+  const exportAllToGoogleCalendar = () => {
+    const allSessions = [...oneOnOneSessions, ...groupSessions];
+
+    if (allSessions.length === 0) {
+      alert("No sessions to export!");
+      return;
+    }
+
+    const eventTitle = `Pineder Learning Sessions - ${allSessions.length} Sessions`;
+    const eventDescription = allSessions
+      .map(
+        (session) =>
+          `• ${session.title} with ${session.mentor.name} on ${session.date} at ${session.time} (${session.duration})`
+      )
+      .join("\n");
+
+    const today = new Date();
+    const startTime = new Date(today);
+    startTime.setHours(9, 0, 0, 0);
+    const endTime = new Date(today);
+    endTime.setHours(17, 0, 0, 0);
+
+    const formatDate = (date: Date) => {
+      return date
+        .toISOString()
+        .replace(/[-:]/g, "")
+        .replace(/\.\d{3}/, "");
+    };
+
+    const googleCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(
+      eventTitle
+    )}&details=${encodeURIComponent(eventDescription)}&dates=${formatDate(
+      startTime
+    )}/${formatDate(endTime)}&location=${encodeURIComponent(
+      "Pineder Learning Platform"
+    )}&sf=true&output=xml`;
+
+    window.open(googleCalendarUrl, "_blank");
+  };
+
+  const getCurrentSessions = () => {
+    if (activeTab === "group") return filteredGroupSessions;
+    if (activeTab === "oneonone") return filteredOneOnOneSessions;
+    if (activeTab === "all")
+      return [...filteredOneOnOneSessions, ...filteredGroupSessions];
+    return [];
+  };
+
+  const getEmptyStateType = () => {
+    if (activeTab === "group") return "group";
+    if (activeTab === "oneonone") return "oneonone";
+    return "all";
+  };
 
   return (
-    <Layout>
+    <Layout showFooter={false}>
       <Head>
-        <title>Group Study Sessions | Pineder</title>
+        <title>My Sessions | Pineder</title>
         <meta
           name="description"
-          content="Join collaborative group study sessions, suggest topics, and learn together with peers and mentors."
+          content="Track your learning sessions, view upcoming appointments, and review completed sessions with mentors."
         />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <SpotlightHero
-        title="SESSIONS"
-        subtitle="IN THE"
-        description="Suggest topics, vote on what to learn, and join collaborative group sessions with peers and mentors."
-        quote="EMBRACE YOUR MOMENT IN THE GLARE OF THE SPOTLIGHT, WHERE YOUR ACHIEVEMENTS ARE CAST IN RADIANT LIGHT."
-        author="Pineder Community"
-      />
+      <div className="px-4 py-8 sm:py-12 md:py-16 mx-auto max-w-7xl sm:px-6 lg:px-8">
+        <SessionTabs
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          stats={stats}
+        />
 
-      <div className="px-4 py-24 mx-auto max-w-7xl sm:px-6 lg:px-8">
-        {/* Tab Navigation */}
-        <div className="mb-8">
-          <div className="flex justify-center space-x-1 p-1 rounded-lg bg-background/50 border border-border/50">
-            <Button
-              variant={activeTab === "topics" ? "default" : "ghost"}
-              onClick={() => setActiveTab("topics")}
-              className="rounded-md"
-            >
-              <Lightbulb className="w-4 h-4 mr-2" />
-              Topics & Voting
-            </Button>
-            <Button
-              variant={activeTab === "sessions" ? "default" : "ghost"}
-              onClick={() => setActiveTab("sessions")}
-              className="rounded-md"
-            >
-              <Calendar className="w-4 h-4 mr-2" />
-              Upcoming Sessions
-            </Button>
-          </div>
-        </div>
-
-        {/* Content based on active tab */}
-        {activeTab === "topics" && (
-          <div className="space-y-8">
-            {/* Topic Submission Section */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-            >
-              <Card className="border-0 shadow-lg">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h2
-                      className="text-2xl font-bold"
-                      style={{ color: colors.text.primary }}
-                    >
-                      Suggest a Topic
-                    </h2>
-                    <Button
-                      onClick={() => setShowTopicForm(true)}
-                      className="bg-gradient-to-r from-[var(--pico-primary)] to-[var(--pico-secondary)] text-white border-0"
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      New Topic
-                    </Button>
-                  </div>
-                  <p style={{ color: colors.text.secondary }}>
-                    Share what you want to learn and get feedback from the
-                    community.
-                  </p>
-                </CardContent>
-              </Card>
-            </motion.div>
-
-            {/* Topics List */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.4 }}
-            >
-              <TopicVoting
-                topics={sortedTopics}
-                votes={votes}
-                onVote={handleVote}
-              />
-            </motion.div>
-          </div>
-        )}
-
-        {activeTab === "sessions" && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-          >
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {groupSessions.map((session) => (
-                <Card key={session.id} className="border-0 shadow-lg">
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3
-                        className="text-lg font-semibold"
-                        style={{ color: colors.text.primary }}
-                      >
-                        {session.topic.topic}
-                      </h3>
-                      <Badge variant="secondary">{session.status}</Badge>
-                    </div>
-                    <p
-                      className="mb-4 text-sm"
-                      style={{ color: colors.text.secondary }}
-                    >
-                      {session.description}
-                    </p>
-                    <div className="flex items-center justify-between text-sm">
-                      <div className="flex items-center space-x-2">
-                        <Users
-                          className="w-4 h-4"
-                          style={{ color: colors.text.secondary }}
-                        />
-                        <span style={{ color: colors.text.secondary }}>
-                          {session.participants.length}/
-                          {session.maxParticipants}
-                        </span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Calendar
-                          className="w-4 h-4"
-                          style={{ color: colors.text.secondary }}
-                        />
-                        <span style={{ color: colors.text.secondary }}>
-                          {session.scheduledDate
-                            ? new Date(
-                                session.scheduledDate
-                              ).toLocaleDateString()
-                            : "TBD"}
-                        </span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.4 }}
+        >
+          {activeTab === "calendar" ? (
+            <GoogleCalendarSection
+              onExportToCalendar={exportAllToGoogleCalendar}
+            />
+          ) : isLoading ? (
+            <div className="text-center py-8 sm:py-12 md:py-16">
+              <div className="animate-spin rounded-full h-12 w-12 sm:h-16 sm:w-16 border-b-2 border-green-600 mx-auto mb-3 sm:mb-4"></div>
+              <p className="text-base sm:text-lg text-gray-600">
+                Loading your sessions...
+              </p>
             </div>
-          </motion.div>
-        )}
+          ) : getCurrentSessions().length === 0 ? (
+            <EmptyStateCard type={getEmptyStateType()} />
+          ) : (
+            <SessionGrid
+              sessions={getCurrentSessions()}
+              onJoinSession={handleJoinSession}
+              onRequestReschedule={handleRequestReschedule}
+              onRateSession={handleRateSession}
+              getStatusColor={getStatusColor}
+              getStatusIcon={getStatusIcon}
+            />
+          )}
+        </motion.div>
       </div>
 
-      {/* Topic Submission Form Modal */}
-      {showTopicForm && (
-        <TopicSubmissionForm
-          isOpen={showTopicForm}
-          onClose={() => setShowTopicForm(false)}
-          onSubmit={handleTopicSubmit}
-        />
-      )}
+      <RescheduleDialog
+        isOpen={showRescheduleDialog}
+        onClose={() => {
+          setShowRescheduleDialog(false);
+          setRescheduleReason("");
+          setSelectedSession(null);
+        }}
+        session={selectedSession}
+        rescheduleReason={rescheduleReason}
+        setRescheduleReason={setRescheduleReason}
+        onSubmit={handleSubmitReschedule}
+      />
+
+      <RatingDialog
+        isOpen={showRatingDialog}
+        onClose={() => {
+          setShowRatingDialog(false);
+          setRating(0);
+          setRatingComment("");
+          setSelectedSession(null);
+        }}
+        session={selectedSession}
+        rating={rating}
+        setRating={setRating}
+        ratingComment={ratingComment}
+        setRatingComment={setRatingComment}
+        onSubmit={handleSubmitRating}
+      />
+
+      <CustomFooter />
     </Layout>
   );
 }

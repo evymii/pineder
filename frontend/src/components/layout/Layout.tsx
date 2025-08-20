@@ -3,6 +3,7 @@
 import { ReactNode } from "react";
 import { Navigation } from "./Navigation";
 import { Footer } from "./Footer";
+import { useTheme } from "../../core/contexts/ThemeContext";
 
 interface LayoutProps {
   children: ReactNode;
@@ -15,10 +16,17 @@ export function Layout({
   showFooter = true,
   className = "",
 }: LayoutProps) {
+  const { colors } = useTheme();
+
   return (
-    <div className={`min-h-screen transition-none ${className}`}>
+    <div
+      className={`min-h-screen transition-none ${className}`}
+      style={{ backgroundColor: colors.background.primary }}
+    >
       <Navigation />
-      <main>{children}</main>
+      <main style={{ backgroundColor: colors.background.primary }}>
+        {children}
+      </main>
       {showFooter && <Footer />}
     </div>
   );
