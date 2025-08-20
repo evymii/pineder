@@ -9,15 +9,9 @@ export function MentorRedirect() {
   const { userRole } = useEmailRouting();
 
   useEffect(() => {
-    // If user is a mentor and not on their dashboard, redirect immediately
-    if (
-      isLoaded &&
-      isSignedIn &&
-      userRole === "mentor" &&
-      router.pathname !== "/mentor-dashboard"
-    ) {
-      router.push("/mentor-dashboard");
-    }
+    // Allow mentors to stay on any page they visit, no automatic redirects
+    // This component is kept for potential future redirect logic if needed
+    // Currently, mentors can freely navigate to home page or any other page
   }, [isLoaded, isSignedIn, userRole, router]);
 
   return null;

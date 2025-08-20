@@ -39,13 +39,13 @@ export function Navigation() {
   }, [menuOpen]);
 
   const getDashboardPath = () => {
-    if (userRole === "mentor") return "/mentor-dashboard";
+    if (userRole === "mentor") return "/user/mentor-dashboard";
     if (userRole === "student") return "/dashboard";
     return "/dashboard";
   };
 
   const mentorNavigationItems: NavigationItem[] = [
-    { id: "dashboard", name: "Dashboard", href: "/mentor-dashboard" },
+    { id: "dashboard", name: "Dashboard", href: "/user/mentor-dashboard" },
   ];
 
   const navigationItems: NavigationItem[] = [

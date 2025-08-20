@@ -29,30 +29,16 @@ import {
 } from "../../../design/system/alert-dialog";
 import { AnswerModal } from "./AnswerModal";
 import { ViewAllAnswersModal } from "./ViewAllAnswersModal";
-
-interface Topic {
-  id: string;
-  topic: string;
-  description: string;
-  studentName: string;
-  category: string;
-  difficulty: string;
-  status: string;
-  submittedAt: string;
-  studentImage?: string;
-  studentLevel?: string;
-  grade?: string;
-  interests?: string;
-}
+import { TopicSubmission } from "../../../core/lib/data/groupSessions";
 
 interface TopicCardProps {
-  topic: Topic;
+  topic: TopicSubmission;
   upvotes: number;
   downvotes: number;
   totalVotes: number;
   userVote: "upvote" | "downvote" | null;
   onVote: (topicId: string, voteType: "upvote" | "downvote") => void;
-  onEdit?: (topic: Topic) => void;
+  onEdit?: (topic: TopicSubmission) => void;
   onDelete?: (topicId: string) => void;
   getMentorImage: (id: string) => string;
   responseCount: number; // Real response count from backend
@@ -375,7 +361,7 @@ export const TopicCard: React.FC<TopicCardProps> = ({
                           Delete Topic
                         </AlertDialogTitle>
                         <AlertDialogDescription className="text-gray-600 text-base leading-relaxed">
-                          Are you sure you want to delete "{topic.topic}"? This
+                          Are you sure you want to delete &quot;{topic.topic}&quot;? This
                           action cannot be undone.
                         </AlertDialogDescription>
                       </AlertDialogHeader>

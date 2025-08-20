@@ -1,6 +1,5 @@
 export { TopicSubmissionForm } from "./TopicSubmissionForm";
 export { default as TopicVoting } from "./TopicVoting";
-export { default as GroupSessionsHeader } from "./GroupSessionsHeader";
 export { TopicCard } from "./TopicCard";
 export { TopicDetailsModal } from "./TopicDetailsModal";
 export { TopicTabs } from "./TopicTabs";

@@ -1,16 +1,12 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { Target, BookOpen, Lightbulb, TrendingUp, Layers } from "lucide-react";
-
-interface Topic {
-  id: string;
-  category: string;
-}
+import { TopicSubmission } from "../../../core/lib/data/groupSessions";
 
 interface TopicTabsProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
-  topics: Topic[];
+  topics: TopicSubmission[];
   getVoteCount: (topicId: string, voteType: "upvote" | "downvote") => number;
 }
 
@@ -54,7 +50,7 @@ export const TopicTabs: React.FC<TopicTabsProps> = ({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: 0.1 }}
-      className="flex space-x-2 overflow-x-auto pb-2 scrollbar-hide"
+      className="flex pb-2 space-x-2 overflow-x-auto scrollbar-hide"
     >
       {tabs.map((tab, index) => {
         const Icon = tab.icon;

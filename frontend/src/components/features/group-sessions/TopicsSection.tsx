@@ -30,22 +30,7 @@ export default function TopicsSection({
 }: TopicsSectionProps) {
   const [showTopicForm, setShowTopicForm] = useState(false);
 
-  // Transform topics to match the expected interface
-  const transformedTopics = topics.map((topic) => ({
-    id: topic.id,
-    topic: topic.topic,
-    description: topic.description,
-    studentName: topic.studentName,
-    studentImage: topic.studentImage,
-    category: topic.category,
-    difficulty: topic.difficulty,
-    status: topic.status,
-    submittedAt: topic.submittedAt,
-    studentLevel: topic.studentLevel,
-    grade: topic.grade,
-    interests: topic.interests,
-    email: topic.email,
-  }));
+
 
   const getVoteCount = (topicId: string, voteType: "upvote" | "downvote") => {
     const topicVotes = votes.filter((v) => v.topicId === topicId);
@@ -111,7 +96,7 @@ export default function TopicsSection({
 
       {/* Topic Voting */}
       <TopicVoting
-        topics={transformedTopics}
+        topics={topics}
         onVote={onVote}
         onEdit={onEdit}
         onDelete={onDelete}

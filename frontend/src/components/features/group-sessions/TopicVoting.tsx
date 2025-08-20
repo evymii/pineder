@@ -3,26 +3,12 @@ import { Lightbulb } from "lucide-react";
 import { TopicCard } from "./TopicCard";
 import { TopicDetailsModal } from "./TopicDetailsModal";
 import { TopicTabs } from "./TopicTabs";
-
-interface Topic {
-  id: string;
-  topic: string;
-  description: string;
-  studentName: string;
-  category: string;
-  difficulty: string;
-  status: string;
-  submittedAt: string;
-  studentImage?: string;
-  studentLevel?: string;
-  grade?: string;
-  interests?: string;
-}
+import { TopicSubmission } from "../../../core/lib/data/groupSessions";
 
 interface TopicVotingProps {
-  topics: Topic[];
+  topics: TopicSubmission[];
   onVote: (topicId: string, voteType: "upvote" | "downvote") => void;
-  onEdit?: (topic: Topic) => void;
+  onEdit?: (topic: TopicSubmission) => void;
   onDelete?: (topicId: string) => void;
   getVoteCount: (topicId: string, voteType: "upvote" | "downvote") => number;
   getUserVote: (topicId: string) => "upvote" | "downvote" | null;
@@ -37,7 +23,7 @@ const TopicVoting: React.FC<TopicVotingProps> = ({
   getUserVote,
 }) => {
   const [activeTab, setActiveTab] = useState("all");
-  const [selectedTopic, setSelectedTopic] = useState<Topic | null>(null);
+  const [selectedTopic, setSelectedTopic] = useState<TopicSubmission | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
   const getMentorImage = (id: string) => {
@@ -88,7 +74,7 @@ const TopicVoting: React.FC<TopicVotingProps> = ({
     return bVotes - aVotes;
   });
 
-  const openDetails = (topic: Topic) => {
+  const openDetails = (topic: TopicSubmission) => {
     setSelectedTopic(topic);
     setIsDetailsOpen(true);
   };
