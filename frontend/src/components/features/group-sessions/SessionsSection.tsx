@@ -1,29 +1,105 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { Users, Calendar, Clock, Target, User, BookOpen } from "lucide-react";
+import {
+  Users,
+  Calendar,
+  Clock,
+  Target,
+  User,
+  BookOpen,
+  Plus,
+} from "lucide-react";
 import { Card, CardContent } from "../../../design/system/card";
 import { Button } from "../../../design/system/button";
 import { Badge } from "../../../design/system/badge";
-import { GroupSession } from "../../../core/lib/data/groupSessions";
+import {
+  GroupSession,
+  TopicSubmission,
+} from "../../../core/lib/data/groupSessions";
 import { SessionDetailsDialog } from "./SessionDetailsDialog";
+import { SessionCreationForm } from "./SessionCreationForm";
+import { useEmailRouting } from "../../../core/hooks/useEmailRouting";
+import { DeleteSessionButton } from "./DeleteSessionButton";
+import { EditSessionButton } from "./EditSessionButton";
+import { useSessionDeletion } from "../../../core/hooks/useSessionDeletion";
 
 interface SessionsSectionProps {
   groupSessions: GroupSession[];
   onSwitchToTopics: () => void;
+  availableTopics: TopicSubmission[];
+  onSessionCreate: (
+    session: Omit<
+      GroupSession,
+      "id" | "createdAt" | "updatedAt" | "participants" | "currentParticipants"
+    >
+  ) => void;
+  onSessionDelete?: (sessionId: string) => void;
+  onSessionEdit?: (
+    sessionId: string,
+    updatedSession: Partial<GroupSession>
+  ) => void;
 }
 
 export default function SessionsSection({
   groupSessions,
   onSwitchToTopics,
+  availableTopics,
+  onSessionCreate,
+  onSessionDelete,
+  onSessionEdit,
 }: SessionsSectionProps) {
   const [selectedSession, setSelectedSession] = useState<GroupSession | null>(
     null
   );
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
+  const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
+  const { isMentor } = useEmailRouting();
+  const { deleteSession } = useSessionDeletion();
 
   const handleDetailsClick = (session: GroupSession) => {
     setSelectedSession(session);
     setIsDetailsDialogOpen(true);
+  };
+
+  const handleCreateNewSession = () => {
+    setIsCreateFormOpen(true);
+  };
+
+  const handleSessionCreate = (
+    newSession: Omit<
+      GroupSession,
+      "id" | "createdAt" | "updatedAt" | "participants" | "currentParticipants"
+    >
+  ) => {
+    onSessionCreate(newSession);
+  };
+
+  const handleSessionDelete = async (sessionId: string) => {
+    try {
+      await deleteSession(sessionId);
+      // Call the parent handler to update the sessions list
+      if (onSessionDelete) {
+        onSessionDelete(sessionId);
+      }
+    } catch (error) {
+      console.error("Failed to delete session:", error);
+      // You could add error handling here (e.g., show a toast notification)
+    }
+  };
+
+  const handleSessionEdit = async (
+    sessionId: string,
+    updatedSession: Partial<GroupSession>
+  ) => {
+    try {
+      // Call the parent handler to update the sessions list
+      if (onSessionEdit) {
+        onSessionEdit(sessionId, updatedSession);
+      }
+    } catch (error) {
+      console.error("Failed to edit session:", error);
+      // You could add error handling here (e.g., show a toast notification)
+    }
   };
 
   return (
@@ -33,10 +109,25 @@ export default function SessionsSection({
       transition={{ duration: 0.5 }}
     >
       <div className="mb-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
-          Upcoming Group Sessions
-        </h2>
-        <p className="text-gray-600">Join scheduled group learning sessions</p>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              Upcoming Group Sessions
+            </h2>
+            <p className="text-gray-600">
+              Join scheduled group learning sessions
+            </p>
+          </div>
+          {isMentor && (
+            <Button
+              onClick={handleCreateNewSession}
+              className="bg-[#58CC02] hover:bg-[#46A302] text-white font-semibold px-6 py-3 rounded-xl flex items-center space-x-2"
+            >
+              <Plus className="w-5 h-5" />
+              <span>Create New Session</span>
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -78,6 +169,21 @@ export default function SessionsSection({
                       <p className="text-lg text-gray-600 font-medium mb-3">
                         {session.teacherName || "Mentor"}
                       </p>
+                    </div>
+                    {/* Edit and Delete Buttons - Only shows for session creators */}
+                    <div className="mt-3 flex justify-center space-x-2">
+                      <EditSessionButton
+                        session={session}
+                        onEdit={handleSessionEdit}
+                        className="p-2 text-[#58CC02] hover:text-[#46A302] hover:bg-[#58CC02]/10 rounded-lg transition-all duration-200"
+                        showAsIcon={true}
+                      />
+                      <DeleteSessionButton
+                        session={session}
+                        onDelete={handleSessionDelete}
+                        className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-all duration-200"
+                        showAsIcon={true}
+                      />
                     </div>
                   </div>
                 </div>
@@ -230,6 +336,15 @@ export default function SessionsSection({
           setIsDetailsDialogOpen(false);
           setSelectedSession(null);
         }}
+        onEdit={handleSessionEdit}
+      />
+
+      {/* Session Creation Form */}
+      <SessionCreationForm
+        isOpen={isCreateFormOpen}
+        onClose={() => setIsCreateFormOpen(false)}
+        availableTopics={availableTopics}
+        onSubmit={handleSessionCreate}
       />
     </motion.div>
   );

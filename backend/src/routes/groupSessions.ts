@@ -20,7 +20,13 @@ import {
   getTopics,
   submitTopic,
   voteTopic,
+  getTopTopics,
 } from "../controllers/groupSession/groupSessionTopicController";
+import {
+  editTopic,
+  deleteTopic,
+  selectTopicForTeaching,
+} from "../controllers/groupSession/topicManagementController";
 
 const router = express.Router();
 
@@ -34,5 +40,9 @@ router.post("/:id/leave", leaveGroupSession);
 router.get("/:id/topics", getTopics);
 router.post("/:id/topics", submitTopic);
 router.post("/:id/topics/:topicId/vote", voteTopic);
+router.put("/:id/topics/:topicId", editTopic);
+router.delete("/:id/topics/:topicId", deleteTopic);
+router.get("/:id/topics/top-voted", getTopTopics);
+router.post("/:id/topics/:topicId/select", selectTopicForTeaching);
 
 export default router;

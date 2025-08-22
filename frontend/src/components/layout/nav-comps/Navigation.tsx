@@ -46,6 +46,7 @@ export function Navigation() {
 
   const mentorNavigationItems: NavigationItem[] = [
     { id: "dashboard", name: "Dashboard", href: "/user/mentor-dashboard" },
+    { id: "group-sessions", name: "Group Sessions", href: "/group-sessions" },
   ];
 
   const navigationItems: NavigationItem[] = [

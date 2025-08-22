@@ -1,38 +1,11 @@
-import mongoose, { Document, Schema } from "mongoose";
-
-export interface ISession extends Document {
-  title: string;
-  description: string;
-  mentorId: mongoose.Types.ObjectId;
-  studentId: mongoose.Types.ObjectId;
-  startTime: Date;
-  endTime: Date;
-  status:
-    | "requested"
-    | "approved"
-    | "rejected"
-    | "scheduled"
-    | "active"
-    | "completed"
-    | "cancelled"
-    | "rescheduled";
-  subject: string;
-  notes?: string;
-  rating?: number;
-  feedback?: string;
-  meetingLink?: string;
-  recordingUrl?: string;
-  materials?: string[];
-  price: number;
-  currency: string;
-  paymentStatus: "pending" | "completed" | "failed" | "refunded";
-  requestNotes?: string;
-  rejectionReason?: string;
-  approvedAt?: Date;
-  rejectedAt?: Date;
-  createdAt: Date;
-  updatedAt: Date;
-}
+import mongoose, { Schema } from "mongoose";
+import { 
+  ISession, 
+  SessionStatusValues, 
+  StudentChoiceValues, 
+  PaymentStatusValues, 
+  MeetingProviderValues 
+} from "../types/session";
 
 const sessionSchema = new Schema<ISession>(
   {
@@ -66,16 +39,7 @@ const sessionSchema = new Schema<ISession>(
     },
     status: {
       type: String,
-      enum: [
-        "requested",
-        "approved",
-        "rejected",
-        "scheduled",
-        "active",
-        "completed",
-        "cancelled",
-        "rescheduled",
-      ],
+      enum: SessionStatusValues,
       default: "requested",
     },
     subject: {
@@ -95,9 +59,7 @@ const sessionSchema = new Schema<ISession>(
       type: String,
       maxlength: 1000,
     },
-    meetingLink: {
-      type: String,
-    },
+
     recordingUrl: {
       type: String,
     },
@@ -106,18 +68,14 @@ const sessionSchema = new Schema<ISession>(
         type: String,
       },
     ],
-    price: {
-      type: Number,
-      required: true,
-      min: 0,
-    },
-    currency: {
+    studentChoice: {
       type: String,
-      default: "USD",
+      enum: StudentChoiceValues,
+      required: true,
     },
     paymentStatus: {
       type: String,
-      enum: ["pending", "completed", "failed", "refunded"],
+      enum: PaymentStatusValues,
       default: "pending",
     },
     requestNotes: {
@@ -134,6 +92,106 @@ const sessionSchema = new Schema<ISession>(
     rejectedAt: {
       type: Date,
     },
+    completedAt: {
+      type: Date,
+    },
+
+    // Zoom meeting information
+    zoomMeetingId: {
+      type: String,
+    },
+    zoomJoinUrl: {
+      type: String,
+    },
+    zoomStartUrl: {
+      type: String,
+    },
+    zoomPassword: {
+      type: String,
+    },
+    meetingProvider: {
+      type: String,
+      enum: MeetingProviderValues,
+      default: "zoom",
+    },
+
+    // Reschedule information
+    rescheduleRequest: {
+      requestedBy: {
+        type: Schema.Types.ObjectId,
+        ref: "Student",
+      },
+      requestedAt: {
+        type: Date,
+      },
+      newStartTime: {
+        type: Date,
+      },
+      newEndTime: {
+        type: Date,
+      },
+      reason: {
+        type: String,
+        maxlength: 1000,
+      },
+      status: {
+        type: String,
+        enum: ["pending", "approved", "rejected"],
+        default: "pending",
+      },
+      approvedAt: {
+        type: Date,
+      },
+      rejectedAt: {
+        type: Date,
+      },
+      rejectionReason: {
+        type: String,
+        maxlength: 500,
+      },
+    },
+    rescheduleHistory: [
+      {
+        requestedBy: {
+          type: Schema.Types.ObjectId,
+          ref: "Student",
+        },
+        requestedAt: {
+          type: Date,
+        },
+        oldStartTime: {
+          type: Date,
+        },
+        oldEndTime: {
+          type: Date,
+        },
+        newStartTime: {
+          type: Date,
+        },
+        newEndTime: {
+          type: Date,
+        },
+        reason: {
+          type: String,
+          maxlength: 1000,
+        },
+        status: {
+          type: String,
+          enum: ["pending", "approved", "rejected"],
+          default: "pending",
+        },
+        approvedAt: {
+          type: Date,
+        },
+        rejectedAt: {
+          type: Date,
+        },
+        rejectionReason: {
+          type: String,
+          maxlength: 500,
+        },
+      },
+    ],
   },
   {
     timestamps: true,

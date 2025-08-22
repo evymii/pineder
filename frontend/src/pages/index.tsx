@@ -21,6 +21,7 @@ import {
 import { mentorCategories } from "../core/lib/data/mentors";
 import { TeacherCategory } from "../components/features/mentors/TeacherCategory";
 import { EventSubmissionForm } from "../components/features/events/EventSubmissionForm";
+import { useEvents, CreateEventData } from "../core/hooks/useEvents";
 import { Button } from "../design/system/button";
 
 export default function Home() {
@@ -60,54 +61,55 @@ export default function Home() {
     },
   ];
 
-  // Mock data for today&apos;s events
-  const todaysEvents = [
-    {
-      id: 1,
-      title: "React Performance Workshop",
-      time: "2:00 PM - 4:00 PM",
-      mentor: "Sarah Chen",
-      participants: 12,
-      maxParticipants: 20,
-      type: "Workshop",
-      status: "Open",
-    },
-    {
-      id: 2,
-      title: "System Design Interview Prep",
-      time: "6:00 PM - 7:30 PM",
-      mentor: "Marcus Rodriguez",
-      participants: 8,
-      maxParticipants: 15,
-      type: "Study Group",
-      status: "Open",
-    },
-    {
-      id: 3,
-      title: "Data Science Q&A Session",
-      time: "8:00 PM - 9:00 PM",
-      mentor: "Aisha Patel",
-      participants: 15,
-      maxParticipants: 25,
-      type: "Q&A",
-      status: "Almost Full",
-    },
-  ];
-
   // State for event form
   const [showEventForm, setShowEventForm] = useState(false);
-  const [events, setEvents] = useState(todaysEvents);
+
+  // Use the events hook
+  const { events, createEvent, loading } = useEvents();
+
+  // Transform backend events to UI format
+  const transformEventsForUI = (backendEvents: any[]) => {
+    return backendEvents
+      .filter((event) => new Date(event.startTime) >= new Date())
+      .slice(0, 3)
+      .map((event) => ({
+        id: parseInt(event.eventId?.replace("#", "") || "0"),
+        title: event.title,
+        time: `${new Date(event.startTime).toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        })} - ${new Date(event.endTime).toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        })}`,
+        mentor: `${event.mentorId?.userId?.firstName || ""} ${
+          event.mentorId?.userId?.lastName || ""
+        }`,
+        participants: event.currentParticipants,
+        maxParticipants: event.maxParticipants || 0,
+        type:
+          event.eventType.charAt(0).toUpperCase() + event.eventType.slice(1),
+        status:
+          event.currentParticipants >= (event.maxParticipants || 0)
+            ? "Full"
+            : "Open",
+      }));
+  };
+
+  // Get today's events for display
+  const todaysEvents = transformEventsForUI(events);
 
   // Handler for event submission
-  const handleEventSubmit = (newEvent: any) => {
-    const event = {
-      ...newEvent,
-      id: Date.now(),
-      participants: 0,
-      status: "Open" as const,
-    };
-
-    setEvents((prevEvents: any[]) => [event, ...prevEvents]);
+  const handleEventSubmit = async (newEvent: CreateEventData) => {
+    try {
+      console.log("Submitting event:", newEvent);
+      await createEvent(newEvent);
+      alert("Event created successfully!");
+      setShowEventForm(false);
+    } catch (error) {
+      console.error("Failed to create event:", error);
+      alert(error instanceof Error ? error.message : "Failed to create event");
+    }
   };
 
   return (
@@ -188,7 +190,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="text-center mt-12">
+          <div className="mt-12 text-center">
             <Link
               href="/mentors"
               className="inline-flex items-center px-8 py-4 text-lg font-medium transition-all duration-300 rounded-xl hover:scale-105"
@@ -251,7 +253,7 @@ export default function Home() {
             {trendingTopics.map((topic) => (
               <div
                 key={topic.id}
-                className="group relative overflow-hidden rounded-2xl transition-all duration-300 hover:scale-105 cursor-pointer"
+                className="relative overflow-hidden transition-all duration-300 cursor-pointer group rounded-2xl hover:scale-105"
                 style={{
                   backgroundColor: colors.background.card,
                   border: `1px solid ${colors.border.primary}`,
@@ -279,7 +281,7 @@ export default function Home() {
                   </div>
 
                   <h3
-                    className="text-xl font-semibold mb-3 group-hover:underline"
+                    className="mb-3 text-xl font-semibold group-hover:underline"
                     style={{ color: colors.text.primary }}
                   >
                     {topic.title}
@@ -358,109 +360,124 @@ export default function Home() {
           </div>
 
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-            {events.map((event) => (
-              <div
-                key={event.id}
-                className="group relative overflow-hidden rounded-2xl transition-all duration-300 hover:scale-105"
-                style={{
-                  backgroundColor: colors.background.card,
-                  border: `1px solid ${colors.border.primary}`,
-                  boxShadow: isDarkMode
-                    ? colors.shadow.medium
-                    : "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-                }}
-              >
-                <div className="p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <span
-                      className={`px-3 py-1 text-xs font-medium rounded-full ${
-                        event.status === "Open"
-                          ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"
-                          : "bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400"
-                      }`}
+            {loading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                <p className="text-sm text-gray-600 mt-2">Loading events...</p>
+              </div>
+            ) : todaysEvents.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-sm text-gray-600">
+                  No events available today
+                </p>
+              </div>
+            ) : (
+              todaysEvents.map((event) => (
+                <div
+                  key={event.id}
+                  className="relative overflow-hidden transition-all duration-300 group rounded-2xl hover:scale-105"
+                  style={{
+                    backgroundColor: colors.background.card,
+                    border: `1px solid ${colors.border.primary}`,
+                    boxShadow: isDarkMode
+                      ? colors.shadow.medium
+                      : "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                  }}
+                >
+                  <div className="p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <span
+                        className={`px-3 py-1 text-xs font-medium rounded-full ${
+                          event.status === "Open"
+                            ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"
+                            : "bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400"
+                        }`}
+                      >
+                        {event.status}
+                      </span>
+                      <span
+                        className="px-3 py-1 text-xs font-medium rounded-full"
+                        style={{
+                          backgroundColor: `${colors.accent.primary}20`,
+                          color: colors.accent.primary,
+                        }}
+                      >
+                        {event.type}
+                      </span>
+                    </div>
+
+                    <h3
+                      className="mb-3 text-xl font-semibold"
+                      style={{ color: colors.text.primary }}
                     >
-                      {event.status}
-                    </span>
-                    <span
-                      className="px-3 py-1 text-xs font-medium rounded-full"
+                      {event.title}
+                    </h3>
+
+                    <div className="mb-6 space-y-3">
+                      <div className="flex items-center">
+                        <Clock
+                          className="w-4 h-4 mr-2"
+                          style={{ color: colors.text.muted }}
+                        />
+                        <span
+                          className="text-sm font-medium"
+                          style={{ color: colors.text.primary }}
+                        >
+                          {event.time}
+                        </span>
+                      </div>
+                      <div className="flex items-center">
+                        <Users
+                          className="w-4 h-4 mr-2"
+                          style={{ color: colors.text.muted }}
+                        />
+                        <span
+                          className="text-sm"
+                          style={{ color: colors.text.secondary }}
+                        >
+                          {event.mentor}
+                        </span>
+                      </div>
+                      <div className="flex items-center">
+                        <TrendingUp
+                          className="w-4 h-4 mr-2"
+                          style={{ color: colors.text.muted }}
+                        />
+                        <span
+                          className="text-sm"
+                          style={{ color: colors.text.secondary }}
+                        >
+                          {event.participants}/{event.maxParticipants}{" "}
+                          participants
+                        </span>
+                      </div>
+                    </div>
+
+                    <button
+                      className="w-full px-4 py-3 font-medium transition-all duration-200 rounded-xl hover:scale-105"
                       style={{
-                        backgroundColor: `${colors.accent.primary}20`,
-                        color: colors.accent.primary,
+                        backgroundColor:
+                          event.status === "Open"
+                            ? colors.accent.success
+                            : colors.accent.warning,
+                        color: colors.text.inverse,
                       }}
                     >
-                      {event.type}
-                    </span>
+                      {event.status === "Open"
+                        ? "Join Session"
+                        : "Join Waitlist"}
+                    </button>
                   </div>
-
-                  <h3
-                    className="text-xl font-semibold mb-3"
-                    style={{ color: colors.text.primary }}
-                  >
-                    {event.title}
-                  </h3>
-
-                  <div className="space-y-3 mb-6">
-                    <div className="flex items-center">
-                      <Clock
-                        className="w-4 h-4 mr-2"
-                        style={{ color: colors.text.muted }}
-                      />
-                      <span
-                        className="text-sm font-medium"
-                        style={{ color: colors.text.primary }}
-                      >
-                        {event.time}
-                      </span>
-                    </div>
-                    <div className="flex items-center">
-                      <Users
-                        className="w-4 h-4 mr-2"
-                        style={{ color: colors.text.muted }}
-                      />
-                      <span
-                        className="text-sm"
-                        style={{ color: colors.text.secondary }}
-                      >
-                        {event.mentor}
-                      </span>
-                    </div>
-                    <div className="flex items-center">
-                      <TrendingUp
-                        className="w-4 h-4 mr-2"
-                        style={{ color: colors.text.muted }}
-                      />
-                      <span
-                        className="text-sm"
-                        style={{ color: colors.text.secondary }}
-                      >
-                        {event.participants}/{event.maxParticipants}{" "}
-                        participants
-                      </span>
-                    </div>
-                  </div>
-
-                  <button
-                    className="w-full py-3 px-4 rounded-xl font-medium transition-all duration-200 hover:scale-105"
-                    style={{
-                      backgroundColor:
-                        event.status === "Open"
-                          ? colors.accent.success
-                          : colors.accent.warning,
-                      color: colors.text.inverse,
-                    }}
-                  >
-                    {event.status === "Open" ? "Join Session" : "Join Waitlist"}
-                  </button>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
 
           {/* Add Event Button */}
-          <div className="text-center mt-8">
+          <div className="mt-8 text-center">
             <Button
               onClick={() => setShowEventForm(true)}
-              className="inline-flex items-center px-8 py-4 text-lg font-medium transition-all duration-300 rounded-xl hover:scale-105 shadow-lg hover:shadow-xl"
+              className="inline-flex items-center px-8 py-4 text-lg font-medium transition-all duration-300 shadow-lg rounded-xl hover:scale-105 hover:shadow-xl"
               style={{
                 background: `linear-gradient(135deg, ${colors.accent.secondary}, ${colors.accent.success})`,
                 color: colors.text.inverse,
@@ -471,7 +488,7 @@ export default function Home() {
             </Button>
           </div>
 
-          <div className="text-center mt-12">
+          <div className="mt-12 text-center">
             <Link
               href="/community/events"
               className="inline-flex items-center px-8 py-4 text-lg font-medium transition-all duration-300 rounded-xl hover:scale-105"

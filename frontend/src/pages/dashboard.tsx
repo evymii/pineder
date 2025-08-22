@@ -76,7 +76,7 @@ export default function Dashboard() {
         {/* Header */}
         <div className="mb-8">
           <h1
-            className="text-3xl font-bold mb-2"
+            className="mb-2 text-3xl font-bold"
             style={{ color: colors.text.primary }}
           >
             Welcome back, {user?.firstName || "User"}!
@@ -89,7 +89,7 @@ export default function Dashboard() {
 
         {/* User Info Card */}
         <div
-          className="p-6 rounded-xl border mb-8"
+          className="p-6 mb-8 border rounded-xl"
           style={{
             backgroundColor: isDarkMode
               ? colors.background.secondary
@@ -178,8 +178,8 @@ export default function Dashboard() {
           <h2 className={`text-xl font-semibold ${textColor} mb-4`}>
             Recent Activity
           </h2>
-          <div className="text-center py-8">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-200 flex items-center justify-center">
+          <div className="py-8 text-center">
+            <div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 bg-gray-200 rounded-full">
               <Calendar className="w-8 h-8 text-gray-400" />
             </div>
             <p className={mutedTextColor}>No recent activity</p>

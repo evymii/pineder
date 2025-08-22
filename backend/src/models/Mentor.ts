@@ -7,6 +7,7 @@ export interface IMentor extends Document {
   experience: number;
   rating: number;
   hourlyRate: number;
+  mentorType: string;
   availability: Array<{
     dayOfWeek: number;
     startTime: string;
@@ -36,7 +37,7 @@ const mentorSchema = new Schema<IMentor>(
     specialties: [
       {
         type: String,
-        required: true,
+        required: false, // Temporarily changed for debugging
       },
     ],
     bio: {
@@ -59,6 +60,11 @@ const mentorSchema = new Schema<IMentor>(
       type: Number,
       required: true,
       min: 0,
+    },
+    mentorType: {
+      type: String,
+      required: false,
+      default: "Software Engineer",
     },
     availability: [
       {
@@ -85,7 +91,7 @@ const mentorSchema = new Schema<IMentor>(
     subjects: [
       {
         type: String,
-        required: true,
+        required: false, // Temporarily changed for debugging
       },
     ],
     education: [

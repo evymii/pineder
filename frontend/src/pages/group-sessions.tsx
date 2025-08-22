@@ -118,7 +118,7 @@ export default function GroupSessionsPage() {
     console.log("handleSaveEdit called:", { updatedTopic });
 
     const updatedTopics = topics.map((topic) =>
-      topic.id === updatedTopic.id ? updatedTopic : topic
+      topic.id === updatedTopic.id ? topic : updatedTopic
     );
     setTopics(updatedTopics);
 
@@ -128,6 +128,65 @@ export default function GroupSessionsPage() {
 
     setEditingTopic(null);
     setIsEditModalOpen(false);
+  };
+
+  const handleSessionCreate = (
+    newSession: Omit<
+      GroupSession,
+      "id" | "createdAt" | "updatedAt" | "participants" | "currentParticipants"
+    >
+  ) => {
+    const session: GroupSession = {
+      ...newSession,
+      id: Date.now().toString(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      participants: [
+        {
+          id: "mentor1",
+          name: newSession.teacherName || "Mentor",
+          image: newSession.teacherImage || "",
+          role: "teacher",
+          joinedAt: new Date().toISOString(),
+          status: "active",
+        },
+      ],
+      currentParticipants: 1,
+    };
+
+    const updatedSessions = [...groupSessions, session];
+    setGroupSessions(updatedSessions);
+
+    if (typeof window !== "undefined") {
+      localStorage.setItem("group-sessions", JSON.stringify(updatedSessions));
+    }
+  };
+
+  const handleSessionDelete = (sessionId: string) => {
+    const updatedSessions = groupSessions.filter(
+      (session) => session.id !== sessionId
+    );
+    setGroupSessions(updatedSessions);
+
+    if (typeof window !== "undefined") {
+      localStorage.setItem("group-sessions", JSON.stringify(updatedSessions));
+    }
+  };
+
+  const handleSessionEdit = (
+    sessionId: string,
+    updatedSession: Partial<GroupSession>
+  ) => {
+    const updatedSessions = groupSessions.map((session) =>
+      session.id === sessionId
+        ? { ...session, ...updatedSession, updatedAt: new Date().toISOString() }
+        : session
+    );
+    setGroupSessions(updatedSessions);
+
+    if (typeof window !== "undefined") {
+      localStorage.setItem("group-sessions", JSON.stringify(updatedSessions));
+    }
   };
 
   const sortedTopics = [...topics].sort((a, b) => {
@@ -174,6 +233,10 @@ export default function GroupSessionsPage() {
             <SessionsSection
               groupSessions={groupSessions}
               onSwitchToTopics={() => setActiveTab("topics")}
+              availableTopics={sortedTopics}
+              onSessionCreate={handleSessionCreate}
+              onSessionDelete={handleSessionDelete}
+              onSessionEdit={handleSessionEdit}
             />
           )}
         </div>

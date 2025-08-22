@@ -38,7 +38,9 @@ export interface GroupSession {
   scheduledDate?: string;
   scheduledTime?: string;
   duration: number;
+  meetingLocation: "zoom" | "in-person";
   meetingLink?: string;
+  meetingAddress?: string;
   description: string;
   category: string;
   difficulty: "beginner" | "intermediate" | "advanced";
@@ -163,12 +165,46 @@ export const mockGroupSessions: GroupSession[] = [
     scheduledDate: "2024-12-15",
     scheduledTime: "14:00",
     duration: 90,
+    meetingLocation: "zoom",
     meetingLink: "https://zoom.us/j/123456789",
     description:
       "Advanced React performance optimization techniques for production applications.",
     category: "Frontend Development",
     difficulty: "intermediate",
     tags: ["React", "Performance", "Optimization", "Frontend"],
+    createdAt: "2024-12-01T10:00:00Z",
+    updatedAt: "2024-12-01T10:00:00Z",
+  },
+  {
+    id: "2",
+    topic: mockTopicSubmissions[1],
+    teacherId: "teacher2",
+    teacherName: "Enkhzaya Bymba",
+    teacherImage:
+      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
+    maxParticipants: 30,
+    currentParticipants: 1,
+    participants: [
+      {
+        id: "p3",
+        name: "Enkhzaya Bymba",
+        image:
+          "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
+        role: "teacher",
+        joinedAt: "2024-12-01T10:00:00Z",
+        status: "active",
+      },
+    ],
+    status: "scheduled",
+    scheduledDate: "2030-03-23",
+    scheduledTime: "13:13",
+    duration: 60,
+    meetingLocation: "in-person",
+    meetingAddress: "Main Campus, Building A, Room 301, Ulaanbaatar, Mongolia",
+    description: "react hooks ahiad uzii",
+    category: "Frontend Development",
+    difficulty: "intermediate",
+    tags: ["React", "Hooks", "Frontend"],
     createdAt: "2024-12-01T10:00:00Z",
     updatedAt: "2024-12-01T10:00:00Z",
   },

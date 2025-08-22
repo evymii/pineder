@@ -6,6 +6,7 @@ interface SessionGridProps {
   onJoinSession: (session: any) => void;
   onRequestReschedule: (session: any) => void;
   onRateSession: (session: any) => void;
+  onCancelSession: (session: any) => void;
   getStatusColor: (status: string) => string;
   getStatusIcon: (status: string) => React.ReactNode;
 }
@@ -15,6 +16,7 @@ export default function SessionGrid({
   onJoinSession,
   onRequestReschedule,
   onRateSession,
+  onCancelSession,
   getStatusColor,
   getStatusIcon,
 }: SessionGridProps) {
@@ -28,6 +30,7 @@ export default function SessionGrid({
           onJoinSession={onJoinSession}
           onRequestReschedule={onRequestReschedule}
           onRateSession={onRateSession}
+          onCancelSession={onCancelSession}
           getStatusColor={getStatusColor}
           getStatusIcon={getStatusIcon}
         />

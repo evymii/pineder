@@ -20,9 +20,12 @@ export interface IGroupSession extends Document {
     id: string;
     title: string;
     description: string;
+    category?: string;
     votes: number;
     submittedBy: mongoose.Types.ObjectId;
-    status: "pending" | "approved" | "rejected";
+            status: "pending" | "approved" | "rejected" | "selected" | "completed";
+    createdAt: Date;
+    updatedAt: Date;
   }>;
   createdAt: Date;
   updatedAt: Date;
@@ -114,6 +117,10 @@ const groupSessionSchema = new Schema<IGroupSession>(
           type: String,
           maxlength: 500,
         },
+        category: {
+          type: String,
+          default: "General",
+        },
         votes: {
           type: Number,
           default: 0,
@@ -125,8 +132,16 @@ const groupSessionSchema = new Schema<IGroupSession>(
         },
         status: {
           type: String,
-          enum: ["pending", "approved", "rejected"],
+          enum: ["pending", "approved", "rejected", "selected", "completed"],
           default: "pending",
+        },
+        createdAt: {
+          type: Date,
+          default: Date.now,
+        },
+        updatedAt: {
+          type: Date,
+          default: Date.now,
         },
       },
     ],

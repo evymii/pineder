@@ -11,7 +11,12 @@ import {
   CheckCircle,
   XCircle,
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "../../../design/system/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../../../design/system/card";
 import { Button } from "../../../design/system/button";
 import { Avatar, AvatarFallback } from "../../../design/system/avatar";
 import { ImageWithFallback } from "../../common/figma/ImageWithFallback";
@@ -62,10 +67,7 @@ export function SessionDashboard({
     switch (status) {
       case "upcoming":
         return (
-                  <Clock
-          className="w-4 h-4"
-          style={{ color: colors.accent.primary }}
-        />
+          <Clock className="w-4 h-4" style={{ color: colors.accent.primary }} />
         );
       case "completed":
         return (

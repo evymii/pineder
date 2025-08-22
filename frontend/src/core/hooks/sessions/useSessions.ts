@@ -47,7 +47,7 @@ export function useSessions() {
   // Fetch sessions with filters and pagination
   const loadSessions = useCallback(
     async (params?: Partial<SessionFilters>) => {
-      if (!isSignedIn) return;
+      if (!isSignedIn || !user) return;
 
       try {
         const searchParams = {
@@ -58,14 +58,84 @@ export function useSessions() {
         };
 
         const result = await fetchSessions(async () => {
-          // Mock data for now - replace with actual API call
-          return {
-            data: [],
-            total: 0,
-            page: searchParams.page || 1,
-            limit: searchParams.limit || 10,
-            totalPages: 0,
+          // Determine user role based on email domain
+          const email = user.emailAddresses[0]?.emailAddress || "";
+          let role = "student"; // default
+          if (email.endsWith("@gmail.com")) {
+            role = "mentor";
+          } else if (email.endsWith("@nest.edu.mn")) {
+            role = "student";
+          }
+
+          const headers = {
+            "Content-Type": "application/json",
+            "x-user-role": role,
+            "x-user-email": email,
+            "x-user-id": user.id || "",
           };
+
+          // Fetch sessions based on user role
+          let endpoint = "";
+          if (role === "student") {
+            endpoint = "/api/sessions/bookings/student";
+          } else {
+            endpoint = "/api/sessions/mentor/all";
+          }
+
+          const response = await fetch(
+            `${
+              process.env.NEXT_PUBLIC_API_URL || "http://localhost:5555"
+            }${endpoint}`,
+            { headers }
+          );
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          const data = await response.json();
+
+          if (data.success) {
+            // Transform backend data to match frontend format
+            const transformedSessions = data.data.map((session: any) => ({
+              id: session._id,
+              title: session.title,
+              mentor: {
+                name:
+                  session.mentorId?.userId?.firstName +
+                  " " +
+                  session.mentorId?.userId?.lastName,
+                image: session.mentorId?.userId?.avatar || "",
+                expertise: session.mentorId?.specialties || [],
+                rating: session.mentorId?.rating || 0,
+              },
+              date: new Date(session.startTime).toLocaleDateString(),
+              time: new Date(session.startTime).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              }),
+              status: session.status,
+              duration: Math.ceil(
+                (new Date(session.endTime).getTime() -
+                  new Date(session.startTime).getTime()) /
+                  (1000 * 60)
+              ),
+              subject: session.subject,
+              price: 0, // Not implemented yet
+              studentChoice: session.studentChoice,
+              meetingLink: session.zoomJoinUrl,
+            }));
+
+            return {
+              data: transformedSessions,
+              total: transformedSessions.length,
+              page: 1,
+              limit: transformedSessions.length,
+              totalPages: 1,
+            };
+          } else {
+            throw new Error(data.error || "Failed to fetch sessions");
+          }
         });
 
         if (result) {
@@ -81,7 +151,14 @@ export function useSessions() {
         console.error("Failed to load sessions:", error);
       }
     },
-    [isSignedIn, pagination.page, pagination.limit, filters, fetchSessions]
+    [
+      isSignedIn,
+      user,
+      pagination.page,
+      pagination.limit,
+      filters,
+      fetchSessions,
+    ]
   );
 
   // Create new session

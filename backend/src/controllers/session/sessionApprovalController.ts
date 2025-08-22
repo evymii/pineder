@@ -1,167 +1,201 @@
-import { Request, Response } from "express";
+import { Response } from "express";
 import Session from "../../models/Session";
-import zoomService from "../../services/zoomService";
+import Mentor from "../../models/Mentor";
 import { AuthRequest } from "../../middleware/auth";
+import { ZoomService } from "../../services/zoomService";
+import { 
+  sendSuccess, 
+  sendError, 
+  sendUnauthorized, 
+  sendNotFound, 
+  sendBadRequest,
+  sendForbidden,
+  validateRole 
+} from "../../utils/responseHelpers";
 
-// Approve session (with Zoom integration)
-export const approveSession = async (req: AuthRequest, res: Response) => {
+export const getPendingSessions = async (req: AuthRequest, res: Response) => {
   try {
-    if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        error: "Authentication required",
-      });
+    if (!req.user) return sendUnauthorized(res);
+    if (!validateRole(req.user.role, "mentor")) {
+      return sendForbidden(res);
     }
 
-    // Only mentors can approve sessions
-    if (req.user.role !== "mentor") {
-      return res.status(403).json({
-        success: false,
-        error: "Only mentors can approve sessions",
-      });
-    }
+    const mentor = await Mentor.findOne({ userId: req.user.dbId });
+    if (!mentor) return sendNotFound(res, "Mentor");
 
-    const { id } = req.params;
-    const { notes } = req.body;
+    const sessions = await Session.find({
+      mentorId: mentor._id,
+      status: "requested",
+    })
+      .populate("studentId", "grade subjects")
+      .populate({
+        path: "studentId",
+        populate: { path: "userId", select: "firstName lastName email avatar" },
+      })
+      .sort({ createdAt: -1 });
 
-    const session = await Session.findById(id);
-    if (!session) {
-      return res.status(404).json({
-        success: false,
-        error: "Session not found",
-      });
-    }
-
-    // Verify mentor is approving their own session
-    if (session.mentorId?.toString() !== req.user.id) {
-      return res.status(403).json({
-        success: false,
-        error: "Can only approve your own sessions",
-      });
-    }
-
-    if (session.status !== "requested") {
-      return res.status(400).json({
-        success: false,
-        error: "Only requested sessions can be approved",
-      });
-    }
-
-    let meetingLink = "";
-    try {
-      const zoomConfig = {
-        topic: `${session.subject} Session`,
-        start_time: new Date(session.startTime).toISOString(),
-        duration: Math.ceil(
-          (new Date(session.endTime).getTime() -
-            new Date(session.startTime).getTime()) /
-            (1000 * 60)
-        ),
-        timezone: "UTC",
-        settings: {
-          host_video: true,
-          participant_video: true,
-          join_before_host: true,
-          mute_upon_entry: false,
-          watermark: false,
-          use_pmi: false,
-          approval_type: 0,
-          audio: "both",
-          auto_recording: "none",
-        },
-      };
-
-      const zoomMeeting = await zoomService.createMeeting(zoomConfig);
-      meetingLink = zoomMeeting.join_url;
-    } catch (zoomError) {
-      console.log(
-        "Zoom API failed, generating simple meeting link:",
-        zoomError
-      );
-      meetingLink = zoomService.generateSimpleMeetingLink(
-        session._id?.toString() || "temp"
-      );
-    }
-
-    session.status = "approved";
-    session.notes = notes;
-    session.approvedAt = new Date();
-    session.meetingLink = meetingLink;
-    await session.save();
-
-    res.json({
-      success: true,
-      data: session,
-      message: "Session approved successfully",
-    });
+    sendSuccess(res, sessions);
   } catch (error) {
-    console.error("Error approving session:", error);
-    res.status(500).json({
-      success: false,
-      error: "Failed to approve session",
-    });
+    sendError(res, "Failed to fetch pending sessions");
   }
 };
 
-// Reject session
-export const rejectSession = async (req: AuthRequest, res: Response) => {
+export const approveSession = async (req: AuthRequest, res: Response) => {
   try {
-    if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        error: "Authentication required",
-      });
+    if (!req.user) return sendUnauthorized(res);
+    if (!validateRole(req.user.role, "mentor")) {
+      return sendForbidden(res);
     }
 
-    // Only mentors can reject sessions
-    if (req.user.role !== "mentor") {
-      return res.status(403).json({
-        success: false,
-        error: "Only mentors can reject sessions",
-      });
-    }
+    const { sessionId } = req.params;
+    const mentor = await Mentor.findOne({ userId: req.user.dbId });
+    if (!mentor) return sendNotFound(res, "Mentor");
 
-    const { id } = req.params;
-    const { reason } = req.body;
-
-    const session = await Session.findById(id);
-    if (!session) {
-      return res.status(404).json({
-        success: false,
-        error: "Session not found",
-      });
-    }
-
-    // Verify mentor is rejecting their own session
-    if (session.mentorId?.toString() !== req.user.id) {
-      return res.status(403).json({
-        success: false,
-        error: "Can only reject your own sessions",
-      });
-    }
+    const session = await Session.findOne({
+      _id: sessionId,
+      mentorId: mentor._id,
+    });
+    if (!session) return sendNotFound(res, "Session");
 
     if (session.status !== "requested") {
-      return res.status(400).json({
-        success: false,
-        error: "Only requested sessions can be rejected",
+      return sendBadRequest(res, "Can only approve requested sessions");
+    }
+
+    // Check for time conflicts
+    const conflictingSession = await Session.findOne({
+      mentorId: mentor._id,
+      _id: { $ne: session._id },
+      startTime: { $lt: session.endTime },
+      endTime: { $gt: session.startTime },
+      status: { $in: ["requested", "approved", "scheduled", "active"] },
+    });
+
+    if (conflictingSession) {
+      return sendBadRequest(res, "Time slot conflicts with another session");
+    }
+
+    // Create Zoom meeting
+    try {
+      const duration = Math.ceil(
+        (session.endTime.getTime() - session.startTime.getTime()) / (1000 * 60)
+      );
+
+      const meetingData = await ZoomService.createMeeting({
+        topic: `${session.subject} - ${session.title}`,
+        startTime: session.startTime,
+        duration: duration,
+        timezone: "UTC",
       });
+
+      // Update session with Zoom meeting info
+      session.zoomMeetingId = meetingData.id;
+      session.zoomJoinUrl = meetingData.join_url;
+      session.zoomStartUrl = meetingData.start_url;
+      session.zoomPassword = meetingData.password;
+      session.meetingProvider = "zoom";
+
+      console.log("Zoom meeting created for approved session", {
+        sessionId: session._id,
+        meetingId: meetingData.id,
+      });
+    } catch (zoomError) {
+      console.error(
+        "Failed to create Zoom meeting, using simple link:",
+        zoomError
+      );
+
+      // Fallback to simple meeting link
+      const simpleMeeting = ZoomService.generateSimpleMeetingLink(
+        session.title,
+        session.startTime
+      );
+
+      session.zoomMeetingId = simpleMeeting.id;
+      session.zoomJoinUrl = simpleMeeting.join_url;
+      session.zoomStartUrl = simpleMeeting.start_url;
+      session.zoomPassword = simpleMeeting.password;
+      session.meetingProvider = "simple";
+    }
+
+    session.status = "approved";
+    session.approvedAt = new Date();
+    await session.save();
+
+    sendSuccess(
+      res,
+      session,
+      "Session approved successfully with meeting link created"
+    );
+  } catch (error) {
+    sendError(res, "Failed to approve session");
+  }
+};
+
+export const rejectSession = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user) return sendUnauthorized(res);
+    if (!validateRole(req.user.role, "mentor")) {
+      return sendForbidden(res);
+    }
+
+    const { sessionId } = req.params;
+    const { rejectionReason } = req.body;
+
+    if (!rejectionReason) {
+      return sendBadRequest(res, "Rejection reason is required");
+    }
+
+    const mentor = await Mentor.findOne({ userId: req.user.dbId });
+    if (!mentor) return sendNotFound(res, "Mentor");
+
+    const session = await Session.findOne({
+      _id: sessionId,
+      mentorId: mentor._id,
+    });
+    if (!session) return sendNotFound(res, "Session");
+
+    if (session.status !== "requested") {
+      return sendBadRequest(res, "Can only reject requested sessions");
     }
 
     session.status = "rejected";
-    session.rejectionReason = reason;
+    session.rejectionReason = rejectionReason;
     session.rejectedAt = new Date();
     await session.save();
 
-    res.json({
-      success: true,
-      data: session,
-      message: "Session rejected successfully",
-    });
+    sendSuccess(res, session, "Session rejected successfully");
   } catch (error) {
-    console.error("Error rejecting session:", error);
-    res.status(500).json({
-      success: false,
-      error: "Failed to reject session",
-    });
+    sendError(res, "Failed to reject session");
+  }
+};
+
+export const getMentorSessions = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user) return sendUnauthorized(res);
+    if (!validateRole(req.user.role, "mentor")) {
+      return sendForbidden(res);
+    }
+
+    const mentor = await Mentor.findOne({ userId: req.user.dbId });
+    if (!mentor) return sendNotFound(res, "Mentor");
+
+    const { status } = req.query;
+    const filter: any = { mentorId: mentor._id };
+
+    if (status) {
+      filter.status = status;
+    }
+
+    const sessions = await Session.find(filter)
+      .populate("studentId", "grade subjects")
+      .populate({
+        path: "studentId",
+        populate: { path: "userId", select: "firstName lastName email avatar" },
+      })
+      .sort({ startTime: -1 });
+
+    sendSuccess(res, sessions);
+  } catch (error) {
+    sendError(res, "Failed to fetch mentor sessions");
   }
 };

@@ -50,7 +50,7 @@ export function TeacherDialog({
                 alt={mentor.name}
                 className="object-cover"
               />
-              <AvatarFallback className="text-lg bg-gradient-to-br from-blue-500 to-purple-600 text-white">
+              <AvatarFallback className="text-lg text-white bg-gradient-to-br from-blue-500 to-purple-600">
                 {mentor.name
                   .split(" ")
                   .map((n: string) => n[0])
@@ -66,7 +66,7 @@ export function TeacherDialog({
               <DialogDescription className={`text-lg ${mutedTextColor}`}>
                 {mentor.role} at {mentor.company}
               </DialogDescription>
-              <div className="flex items-center space-x-2 mt-2">
+              <div className="flex items-center mt-2 space-x-2">
                 <Star className="w-4 h-4 text-yellow-400 fill-current" />
                 <span className={`text-sm ${mutedTextColor}`}>
                   {mentor.rating} ({mentor.sessions} sessions)

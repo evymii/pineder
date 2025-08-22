@@ -1,156 +1,124 @@
-import { Request, Response } from "express";
+import { Response } from "express";
 import User from "../../models/User";
-import Mentor from "../../models/Mentor";
-import Student from "../../models/Student";
 import { AuthRequest } from "../../middleware/auth";
 
-// Get user profile with role-specific data
-export const getUserProfile = async (req: AuthRequest, res: Response) => {
+const handleError = (res: Response, error: any, message: string) => {
+  console.error(`Error ${message}:`, error);
+  res.status(500).json({ success: false, error: `Failed to ${message}` });
+};
+
+const unauthorized = (res: Response) =>
+  res.status(401).json({ success: false, error: "Authentication required" });
+
+const notFound = (res: Response, resource: string) =>
+  res.status(404).json({ success: false, error: `${resource} not found` });
+
+const badRequest = (res: Response, message: string) =>
+  res.status(400).json({ success: false, error: message });
+
+const success = (res: Response, data?: any, message?: string, status = 200) => {
+  const response: any = { success: true };
+  if (data) response.data = data;
+  if (message) response.message = message;
+  res.status(status).json(response);
+};
+
+// Simple file upload handling (no Cloudinary)
+
+export const uploadProfilePhoto = async (req: AuthRequest, res: Response) => {
   try {
-    if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        error: "Authentication required",
-      });
+    if (!req.user) return unauthorized(res);
+
+    const { imageData } = req.body; // Base64 image data
+
+    if (!imageData) {
+      return badRequest(res, "Image data is required");
     }
 
-    const user = await User.findById(req.user.id).select("-__v");
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        error: "User not found",
-      });
-    }
+    // For now, just store the base64 data or a placeholder
+    // In production, you'd want to implement proper file storage
+    const avatarUrl = imageData.startsWith("data:")
+      ? imageData
+      : `data:image/jpeg;base64,${imageData}`;
 
-    // Get corresponding profile data
-    let profileData = {};
-    if (user.role === "mentor") {
-      const mentorProfile = await Mentor.findOne({ userId: user._id });
-      profileData = { mentorProfile };
-    } else if (user.role === "student") {
-      const studentProfile = await Student.findOne({ userId: user._id });
-      profileData = { studentProfile };
-    }
+    // Update user profile with new photo URL
+    const updatedUser = await User.findOneAndUpdate(
+      { email: req.user.email },
+      { avatar: avatarUrl },
+      { new: true }
+    );
 
-    res.json({
-      success: true,
-      data: {
-        user,
-        ...profileData,
-      },
-    });
+    if (!updatedUser) return notFound(res, "User");
+
+    success(res, { avatar: avatarUrl }, "Profile photo uploaded successfully");
   } catch (error) {
-    console.error("Error fetching user profile:", error);
-    res.status(500).json({
-      success: false,
-      error: "Failed to fetch user profile",
-    });
+    handleError(res, error, "upload profile photo");
   }
 };
 
-// Get user settings
-export const getUserSettings = async (req: AuthRequest, res: Response) => {
+export const updateProfile = async (req: AuthRequest, res: Response) => {
   try {
-    if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        error: "Authentication required",
-      });
+    if (!req.user) return unauthorized(res);
+
+    const { firstName, lastName, bio, location, phone, dateOfBirth, links } =
+      req.body;
+
+    const updateData: any = {};
+    if (firstName) updateData.firstName = firstName;
+    if (lastName) updateData.lastName = lastName;
+    if (bio) updateData.bio = bio;
+    if (location) updateData.location = location;
+    if (phone) updateData.phone = phone;
+    if (dateOfBirth) updateData.dateOfBirth = new Date(dateOfBirth);
+    if (links) updateData.links = links;
+
+    // Mark profile as completed if required fields are present
+    if (firstName && lastName && bio) {
+      updateData.profileCompleted = true;
     }
 
-    const user = await User.findById(req.user.id).select("preferences");
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        error: "User not found",
-      });
-    }
-
-    res.json({
-      success: true,
-      data: user.preferences,
-    });
-  } catch (error) {
-    console.error("Error fetching user settings:", error);
-    res.status(500).json({
-      success: false,
-      error: "Failed to fetch user settings",
-    });
-  }
-};
-
-// Update user profile
-export const updateUserProfile = async (req: AuthRequest, res: Response) => {
-  try {
-    if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        error: "Authentication required",
-      });
-    }
-
-    const updates = req.body;
-    const user = await User.findByIdAndUpdate(
-      req.user.id,
-      { ...updates, profileCompleted: true },
+    const updatedUser = await User.findOneAndUpdate(
+      { email: req.user.email },
+      updateData,
       { new: true, runValidators: true }
     );
 
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        error: "User not found",
-      });
-    }
+    if (!updatedUser) return notFound(res, "User");
 
-    res.json({
-      success: true,
-      data: user,
-      message: "Profile updated successfully",
-    });
+    success(res, updatedUser, "Profile updated successfully");
   } catch (error) {
-    console.error("Error updating user profile:", error);
-    res.status(500).json({
-      success: false,
-      error: "Failed to update user profile",
-    });
+    handleError(res, error, "update profile");
   }
 };
 
-// Update user settings
-export const updateUserSettings = async (req: AuthRequest, res: Response) => {
+export const getProfile = async (req: AuthRequest, res: Response) => {
   try {
-    if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        error: "Authentication required",
-      });
-    }
+    if (!req.user) return unauthorized(res);
 
-    const { preferences } = req.body;
-    const user = await User.findByIdAndUpdate(
-      req.user.id,
-      { preferences },
-      { new: true, runValidators: true }
-    );
+    const user = await User.findOne({ email: req.user.email });
+    if (!user) return notFound(res, "User");
 
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        error: "User not found",
-      });
-    }
-
-    res.json({
-      success: true,
-      data: user.preferences,
-      message: "Settings updated successfully",
-    });
+    success(res, user);
   } catch (error) {
-    console.error("Error updating user settings:", error);
-    res.status(500).json({
-      success: false,
-      error: "Failed to update user settings",
-    });
+    handleError(res, error, "fetch profile");
+  }
+};
+
+export const deleteProfilePhoto = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user) return unauthorized(res);
+
+    const user = await User.findOne({ email: req.user.email });
+    if (!user) return notFound(res, "User");
+
+    // No external storage cleanup needed for now
+
+    // Remove avatar from user profile
+    user.avatar = undefined;
+    await user.save();
+
+    success(res, null, "Profile photo deleted successfully");
+  } catch (error) {
+    handleError(res, error, "delete profile photo");
   }
 };

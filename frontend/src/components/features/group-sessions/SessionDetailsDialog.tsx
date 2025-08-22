@@ -19,18 +19,25 @@ import {
 import { Button } from "../../../design/system/button";
 import { Badge } from "../../../design/system/badge";
 import { GroupSession } from "../../../core/lib/data/groupSessions";
+import { DeleteSessionButton } from "./DeleteSessionButton";
+import { EditSessionButton } from "./EditSessionButton";
+import { useSessionDeletion } from "../../../core/hooks/useSessionDeletion";
 
 interface SessionDetailsDialogProps {
   session: GroupSession | null;
   isOpen: boolean;
   onClose: () => void;
+  onEdit?: (sessionId: string, updatedSession: Partial<GroupSession>) => void;
 }
 
 export const SessionDetailsDialog: React.FC<SessionDetailsDialogProps> = ({
   session,
   isOpen,
   onClose,
+  onEdit,
 }) => {
+  const { deleteSession } = useSessionDeletion();
+
   if (!session) return null;
 
   const handleJoinZoom = () => {
@@ -43,6 +50,17 @@ export const SessionDetailsDialog: React.FC<SessionDetailsDialogProps> = ({
     if (session.meetingLink) {
       navigator.clipboard.writeText(session.meetingLink);
       // You could add a toast notification here
+    }
+  };
+
+  const handleDeleteSession = async (sessionId: string) => {
+    try {
+      await deleteSession(sessionId);
+      onClose(); // Close the dialog after successful deletion
+      // You might want to trigger a refresh of the sessions list here
+    } catch (error) {
+      console.error("Failed to delete session:", error);
+      // You could add error handling here (e.g., show a toast notification)
     }
   };
 
@@ -139,7 +157,7 @@ export const SessionDetailsDialog: React.FC<SessionDetailsDialogProps> = ({
                 <Calendar className="w-5 h-5 text-gray-600 mr-2" />
                 Session Details
               </h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <div className="flex items-center space-x-3">
                   <Calendar className="w-5 h-5 text-gray-500" />
                   <div>
@@ -186,11 +204,42 @@ export const SessionDetailsDialog: React.FC<SessionDetailsDialogProps> = ({
                     </p>
                   </div>
                 </div>
+                <div className="flex items-center space-x-3">
+                  {session.meetingLocation === "zoom" ? (
+                    <Video className="w-5 h-5 text-green-500" />
+                  ) : session.meetingLocation === "in-person" ? (
+                    <MapPin className="w-5 h-5 text-blue-500" />
+                  ) : (
+                    <MapPin className="w-5 h-5 text-gray-500" />
+                  )}
+                  <div>
+                    <p className="text-sm text-gray-500">Meeting Type</p>
+                    <p className="font-medium text-gray-900">
+                      {session.meetingLocation === "zoom"
+                        ? "Zoom Meeting"
+                        : session.meetingLocation === "in-person"
+                        ? "In-Person Class"
+                        : "Not specified"}
+                    </p>
+                  </div>
+                </div>
+                {session.meetingLocation === "in-person" &&
+                  session.meetingAddress && (
+                    <div className="flex items-center space-x-3">
+                      <MapPin className="w-5 h-5 text-blue-500" />
+                      <div>
+                        <p className="text-sm text-gray-500">Location</p>
+                        <p className="font-medium text-gray-900">
+                          {session.meetingAddress}
+                        </p>
+                      </div>
+                    </div>
+                  )}
               </div>
             </motion.div>
 
             {/* Zoom Meeting */}
-            {session.meetingLink && (
+            {session.meetingLocation === "zoom" && session.meetingLink && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -229,6 +278,52 @@ export const SessionDetailsDialog: React.FC<SessionDetailsDialogProps> = ({
                 </div>
               </motion.div>
             )}
+
+            {/* In-Person Meeting */}
+            {session.meetingLocation === "in-person" &&
+              session.meetingAddress && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: 0.5 }}
+                  className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-100"
+                >
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <MapPin className="w-5 h-5 text-blue-600 mr-2" />
+                    In-Person Meeting
+                  </h3>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-3 bg-white rounded-xl border border-blue-200">
+                      <div className="flex items-center space-x-3">
+                        <MapPin className="w-5 h-5 text-blue-600" />
+                        <span className="text-sm text-gray-600">
+                          Meeting Address
+                        </span>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          navigator.clipboard.writeText(
+                            session.meetingAddress || ""
+                          )
+                        }
+                        className="text-blue-600 border-blue-300 hover:bg-blue-50"
+                      >
+                        Copy Address
+                      </Button>
+                    </div>
+                    <div className="p-3 bg-white rounded-xl border border-blue-200">
+                      <p className="text-sm text-gray-600 mb-1">
+                        Location Details
+                      </p>
+                      <p className="font-medium text-gray-900">
+                        {session.meetingAddress}
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
 
             {/* Participants */}
             <motion.div
@@ -297,20 +392,29 @@ export const SessionDetailsDialog: React.FC<SessionDetailsDialogProps> = ({
 
           {/* Footer Actions */}
           <div className="px-6 py-6 bg-gray-50 border-t border-gray-200 mt-auto">
-            <div className="flex space-x-3">
-              <Button
-                variant="outline"
-                onClick={onClose}
-                className="flex-1 border-gray-300 text-gray-700 hover:bg-gray-100 py-3"
-              >
-                Close
-              </Button>
-              <Button
-                onClick={handleJoinZoom}
-                className="flex-1 bg-[#58CC02] hover:bg-[#46A302] text-white font-semibold py-3"
-              >
-                Join Group Session
-              </Button>
+            <div className="flex flex-col space-y-3">
+              {/* Action Buttons Row */}
+              <div className="flex space-x-3">
+                <Button
+                  variant="outline"
+                  onClick={onClose}
+                  className="flex-1 border-gray-300 text-gray-700 hover:bg-gray-100 py-3"
+                >
+                  Close
+                </Button>
+                <Button
+                  onClick={
+                    session.meetingLocation === "zoom"
+                      ? handleJoinZoom
+                      : undefined
+                  }
+                  className="flex-1 bg-[#58CC02] hover:bg-[#46A302] text-white font-semibold py-3"
+                >
+                  {session.meetingLocation === "zoom"
+                    ? "Join Group Session"
+                    : "Join Session"}
+                </Button>
+              </div>
             </div>
           </div>
         </motion.div>

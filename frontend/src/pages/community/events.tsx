@@ -14,129 +14,240 @@ import {
 import Link from "next/link";
 import { Button } from "../../design/system/button";
 import { Layout } from "../../components/layout/Layout";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTheme } from "../../core/contexts/ThemeContext";
 import {
   EventSubmissionForm,
   EventDetails,
 } from "../../components/features/events";
+import { useEvents, Event, CreateEventData } from "../../core/hooks/useEvents";
+import { useUser } from "@clerk/nextjs";
 
 export default function CommunityEvents() {
   const { isDarkMode, colors } = useTheme();
-  const [currentMonth, setCurrentMonth] = useState(new Date(2024, 11, 1)); // December 2024
+  const { user } = useUser();
+  const [currentMonth, setCurrentMonth] = useState(new Date()); // Current month
   const [viewMode, setViewMode] = useState<"month" | "week" | "day">("week");
 
   // State for event form
   const [showEventForm, setShowEventForm] = useState(false);
 
   // State for event details
-  const [selectedEvent, setSelectedEvent] = useState<any>(null);
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [showEventDetails, setShowEventDetails] = useState(false);
 
-  const events = [
-    {
-      id: 1,
-      title: "React Performance Workshop",
-      startTime: "09:00",
-      endTime: "11:00",
-      date: new Date(), // Today
-      endDate: new Date(), // Single day event
-      type: "Workshop",
-      status: "Open",
-      icon: BookOpen,
-      description:
-        "Learn advanced React optimization techniques and performance best practices",
-      location: "Online",
-      attendees: 28,
-      category: "Learning",
-      color: "bg-blue-500",
-    },
-    {
-      id: 2,
-      title: "System Design Interview Prep",
-      startTime: "14:00",
-      endTime: "15:30",
-      date: new Date(), // Today
-      endDate: new Date(), // Single day event
-      type: "Study Group",
-      status: "Almost Full",
-      icon: Users,
-      description: "Practice system design problems with experienced engineers",
-      location: "Conference Room A",
-      attendees: 18,
-      category: "Career",
-      color: "bg-green-500",
-    },
-    {
-      id: 3,
-      title: "Data Science Q&A Session",
-      startTime: "16:00",
-      endTime: "17:00",
-      date: new Date(), // Today
-      endDate: new Date(), // Single day event
-      type: "Q&A",
-      status: "Open",
-      icon: Video,
-      description:
-        "Get answers to your data science and ML questions from experts",
-      location: "Online",
-      attendees: 35,
-      category: "Data Science",
-      color: "bg-purple-500",
-    },
-    {
-      id: 4,
-      title: "Frontend Architecture Discussion",
-      startTime: "19:00",
-      endTime: "20:30",
-      date: new Date(), // Today
-      endDate: new Date(), // Single day event
-      type: "Discussion",
-      status: "Open",
-      icon: Mic,
-      description:
-        "Deep dive into modern frontend architecture patterns and decisions",
-      location: "Online",
-      attendees: 22,
-      category: "Architecture",
-      color: "bg-orange-500",
-    },
-    {
-      id: 5,
-      title: "Code Review Best Practices",
-      startTime: "20:00",
-      endTime: "21:00",
-      date: new Date(), // Today
-      endDate: new Date(), // Single day event
-      type: "Workshop",
-      status: "Open",
-      icon: BookOpen,
-      description:
-        "Learn effective code review techniques and feedback strategies",
-      location: "Online",
-      attendees: 15,
-      category: "Best Practices",
-      color: "bg-indigo-500",
-    },
-  ];
+  // Store original backend events for EventDetails
+  const [originalEvents, setOriginalEvents] = useState<Event[]>([]);
+
+  // Use the events hook
+  const {
+    events,
+    loading,
+    error,
+    createEvent,
+    registerForEvent,
+    unregisterFromEvent,
+    canCreateEvents,
+    canRegisterForEvents,
+  } = useEvents();
 
   // Handler for event submission
-  const handleEventSubmit = (newEvent: any) => {
-    // TODO: Implement event submission logic
-    console.log("New event submitted:", newEvent);
-    setShowEventForm(false);
+  const handleEventSubmit = async (newEvent: CreateEventData) => {
+    try {
+      await createEvent(newEvent);
+      alert("Event created successfully!");
+      setShowEventForm(false);
+    } catch (error) {
+      console.error("Failed to create event:", error);
+      alert(error instanceof Error ? error.message : "Failed to create event");
+    }
+  };
+
+  // Debug function to show current user info
+  const showUserInfo = () => {
+    const email = user?.emailAddresses[0]?.emailAddress || "No email";
+    const role = email.endsWith("@gmail.com")
+      ? "mentor"
+      : email.endsWith("@nest.edu.mn")
+      ? "student"
+      : "unknown";
+    alert(
+      `Current User Info:\nEmail: ${email}\nRole: ${role}\nUser ID: ${
+        user?.id || "No ID"
+      }`
+    );
+  };
+
+  // Helper function to transform backend event to frontend format
+  const transformEventForDisplay = (event: Event) => {
+    console.log("Transforming event:", event);
+    const startDate = new Date(event.startTime);
+    const endDate = new Date(event.endTime);
+
+    // Handle eventId safely
+    let eventId = 0;
+    if (event.eventId) {
+      try {
+        eventId = parseInt(event.eventId.replace("#", ""));
+      } catch (error) {
+        console.error("Error parsing eventId:", error);
+        eventId = 0;
+      }
+    }
+
+    return {
+      id: eventId,
+      title: event.title,
+      startTime: startDate.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      endTime: endDate.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      date: startDate,
+      endDate: endDate,
+      type: event.eventType.charAt(0).toUpperCase() + event.eventType.slice(1),
+      status:
+        event.currentParticipants >= (event.maxParticipants || 0)
+          ? "Full"
+          : "Open",
+      icon: getEventIcon(event.eventType),
+      description: event.description,
+      location: event.location,
+      attendees: event.currentParticipants,
+      category: event.category,
+      color: getEventColor(event.eventType),
+    };
+  };
+
+  // Helper function to get event icon
+  const getEventIcon = (eventType: string) => {
+    switch (eventType) {
+      case "workshop":
+        return BookOpen;
+      case "discussion":
+        return Mic;
+      case "webinar":
+        return Video;
+      case "q&a":
+        return Users;
+      default:
+        return Calendar;
+    }
+  };
+
+  // Helper function to get event color
+  const getEventColor = (eventType: string) => {
+    switch (eventType) {
+      case "workshop":
+        return "bg-blue-500";
+      case "discussion":
+        return "bg-green-500";
+      case "webinar":
+        return "bg-purple-500";
+      case "q&a":
+        return "bg-orange-500";
+      default:
+        return "bg-indigo-500";
+    }
   };
 
   // Handler for opening event details
-  const handleEventClick = (event: any) => {
-    setSelectedEvent(event);
-    setShowEventDetails(true);
+  const handleEventClick = (event: Event) => {
+    console.log("handleEventClick - transformed event:", event);
+    console.log("handleEventClick - transformed event._id:", event._id);
+    console.log("handleEventClick - transformed event.eventId:", event.eventId);
+    console.log("handleEventClick - originalEvents:", originalEvents);
+
+    // Find the original backend event data using the event ID
+    const originalEvent = originalEvents.find(
+      (e) => e._id === event._id || e.eventId === event.eventId
+    );
+
+    if (originalEvent) {
+      console.log("handleEventClick - found original event:", originalEvent);
+      console.log(
+        "handleEventClick - original event.startTime:",
+        originalEvent.startTime
+      );
+      console.log(
+        "handleEventClick - original event.endTime:",
+        originalEvent.endTime
+      );
+      console.log(
+        "handleEventClick - original event.eventId:",
+        originalEvent.eventId
+      );
+
+      // Use the original backend event data for EventDetails
+      const eventForDetails = {
+        ...originalEvent,
+        // Ensure required properties exist
+        eventType: originalEvent.eventType || "workshop",
+        registeredStudents: originalEvent.registeredStudents || [],
+      };
+
+      console.log("handleEventClick - event for details:", eventForDetails);
+      setSelectedEvent(eventForDetails);
+      setShowEventDetails(true);
+    } else {
+      console.error("handleEventClick - original event not found for:", event);
+      console.error(
+        "handleEventClick - available original events:",
+        originalEvents.map((e) => ({
+          _id: e._id,
+          eventId: e.eventId,
+          title: e.title,
+        }))
+      );
+      // Fallback to transformed event
+      setSelectedEvent(event);
+      setShowEventDetails(true);
+    }
   };
 
   // Handler for closing event details
   const handleCloseEventDetails = () => {
     setShowEventDetails(false);
     setSelectedEvent(null);
+  };
+
+  // Handler for registering/unregistering from event
+  const handleEventRegistration = async (event: Event) => {
+    try {
+      console.log("Registration - Event:", event);
+      console.log("Registration - User ID:", user?.id);
+      console.log(
+        "Registration - registeredStudents:",
+        event.registeredStudents
+      );
+
+      // Check if user is already registered (safely handle undefined registeredStudents)
+      // registeredStudents might be ObjectIds or strings, so we need to handle both
+      const isRegistered =
+        event.registeredStudents?.some(
+          (studentId: any) =>
+            studentId === user?.id ||
+            studentId._id === user?.id ||
+            studentId.toString() === user?.id
+        ) || false;
+      console.log("Registration - isRegistered:", isRegistered);
+
+      if (isRegistered) {
+        await unregisterFromEvent(event._id);
+        alert("Successfully unregistered from event!");
+      } else {
+        await registerForEvent(event._id);
+        alert("Successfully registered for event!");
+      }
+    } catch (error) {
+      console.error("Failed to handle event registration:", error);
+      alert(
+        error instanceof Error ? error.message : "Failed to handle registration"
+      );
+    }
   };
 
   const getDaysInMonth = (date: Date) => {
@@ -193,25 +304,64 @@ export default function CommunityEvents() {
     setCurrentMonth(new Date());
   };
 
+  const goToEventsWeek = () => {
+    // Go to the week of the first event (August 2025)
+    const eventWeek = new Date(2025, 7, 25); // August 25, 2025 (Monday)
+    setCurrentMonth(eventWeek);
+  };
+
+  // Store original events and set initial view
+  useEffect(() => {
+    // Store original backend events for EventDetails
+    if (events.length > 0) {
+      console.log("Storing original events:", events);
+      setOriginalEvents(events);
+
+      // Automatically go to the events week when the page loads
+      const firstEvent = events[0];
+      const eventDate = new Date(firstEvent.startTime);
+      const eventWeek = new Date(eventDate);
+      eventWeek.setDate(eventDate.getDate() - eventDate.getDay()); // Go to Monday of that week
+      setCurrentMonth(eventWeek);
+    }
+  }, [events]);
+
   const getEventsForDate = (date: Date) => {
-    return events.filter((event) => {
-      const eventDate = event.date;
-      return (
+    console.log("Getting events for date:", date);
+    console.log("All events:", events);
+
+    const filteredEvents = events.filter((event) => {
+      const eventDate = new Date(event.startTime);
+      console.log("Event date:", eventDate, "for event:", event.title);
+      const matches =
         eventDate.getDate() === date.getDate() &&
         eventDate.getMonth() === date.getMonth() &&
-        eventDate.getFullYear() === date.getFullYear()
-      );
+        eventDate.getFullYear() === date.getFullYear();
+      console.log("Date matches:", matches);
+      return matches;
     });
+
+    console.log("Filtered events:", filteredEvents);
+    return filteredEvents.map(transformEventForDisplay);
   };
 
   const getEventsForWeek = (startDate: Date) => {
     const endDate = new Date(startDate);
     endDate.setDate(startDate.getDate() + 6);
 
-    return events.filter((event) => {
-      const eventDate = event.date;
-      return eventDate >= startDate && eventDate <= endDate;
+    console.log("Week range:", { startDate, endDate });
+
+    const filteredEvents = events.filter((event) => {
+      const eventDate = new Date(event.startTime);
+      const inRange = eventDate >= startDate && eventDate <= endDate;
+      console.log(
+        `Event ${event.title} on ${eventDate}: in range = ${inRange}`
+      );
+      return inRange;
     });
+
+    console.log("Week filtered events:", filteredEvents);
+    return filteredEvents.map(transformEventForDisplay);
   };
 
   const getEventsForDay = (date: Date) => {
@@ -260,16 +410,22 @@ export default function CommunityEvents() {
             {day}
           </div>
           <div className="space-y-0.5">
-            {dayEvents.slice(0, 2).map((event) => (
-              <div
-                key={event.id}
-                className={`text-xs p-0.5 rounded ${event.color} text-white truncate cursor-pointer hover:opacity-80 transition-opacity`}
-                title={event.title}
-                onClick={() => handleEventClick(event)}
-              >
-                {event.title}
-              </div>
-            ))}
+            {dayEvents.slice(0, 2).map((event) => {
+              // Find the original backend event for this transformed event
+              const originalEvent = originalEvents.find(
+                (e) => e._id === event._id || e.title === event.title
+              );
+              return (
+                <div
+                  key={event.id}
+                  className={`text-xs p-0.5 rounded ${event.color} text-white truncate cursor-pointer hover:opacity-80 transition-opacity`}
+                  title={event.title}
+                  onClick={() => handleEventClick(originalEvent || event)}
+                >
+                  {event.title}
+                </div>
+              );
+            })}
             {dayEvents.length > 2 && (
               <div
                 className="text-xs cursor-pointer hover:underline"
@@ -315,11 +471,14 @@ export default function CommunityEvents() {
 
   const renderWeekView = () => {
     const weekDays = getWeekDays();
-    const today = new Date();
-    const startOfWeek = new Date(today);
-    startOfWeek.setDate(today.getDate() - today.getDay());
+    // Use currentMonth instead of today to show the correct week
+    const startOfWeek = new Date(currentMonth);
+    startOfWeek.setDate(currentMonth.getDate() - currentMonth.getDay());
 
+    console.log("Week view - currentMonth:", currentMonth);
+    console.log("Week view - startOfWeek:", startOfWeek);
     const weekEvents = getEventsForWeek(startOfWeek);
+    console.log("Week view - weekEvents:", weekEvents);
 
     return (
       <div
@@ -336,10 +495,14 @@ export default function CommunityEvents() {
           {weekDays.map((day, index) => {
             const date = new Date(startOfWeek);
             date.setDate(startOfWeek.getDate() + index);
-            const isToday = date.toDateString() === today.toDateString();
-            const dayEvents = weekEvents.filter(
-              (event) => event.date.toDateString() === date.toDateString()
-            );
+            const isToday = date.toDateString() === new Date().toDateString();
+            const dayEvents = weekEvents.filter((event) => {
+              const matches = event.date.toDateString() === date.toDateString();
+              console.log(
+                `Day ${date.toDateString()} - Event ${event.title}: ${matches}`
+              );
+              return matches;
+            });
 
             return (
               <div
@@ -385,21 +548,31 @@ export default function CommunityEvents() {
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      {dayEvents.map((event) => (
-                        <div
-                          key={event.id}
-                          className={`p-2 rounded-lg ${event.color} text-white text-xs cursor-pointer hover:opacity-80 transition-opacity`}
-                          onClick={() => handleEventClick(event)}
-                        >
-                          <div className="mb-1 font-medium">{event.title}</div>
-                          <div className="text-white/80">
-                            {event.startTime} - {event.endTime}
+                      {dayEvents.map((event) => {
+                        // Find the original backend event for this transformed event
+                        const originalEvent = originalEvents.find(
+                          (e) => e._id === event._id || e.title === event.title
+                        );
+                        return (
+                          <div
+                            key={event.id}
+                            className={`p-2 rounded-lg ${event.color} text-white text-xs cursor-pointer hover:opacity-80 transition-opacity`}
+                            onClick={() =>
+                              handleEventClick(originalEvent || event)
+                            }
+                          >
+                            <div className="mb-1 font-medium">
+                              {event.title}
+                            </div>
+                            <div className="text-white/80">
+                              {event.startTime} - {event.endTime}
+                            </div>
+                            <div className="mt-1 text-xs text-white/70">
+                              {event.location}
+                            </div>
                           </div>
-                          <div className="mt-1 text-xs text-white/70">
-                            {event.location}
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -447,74 +620,80 @@ export default function CommunityEvents() {
             </div>
           ) : (
             <div className="space-y-4">
-              {dayEvents.map((event) => (
-                <div
-                  key={event.id}
-                  className={`p-4 rounded-lg border-l-4 shadow-sm transition-all duration-200 hover:shadow-md cursor-pointer`}
-                  style={{
-                    borderLeftColor:
-                      event.color.split("-")[1] === "08CB00"
-                        ? "#08CB00"
-                        : event.color.split("-")[1],
-                    backgroundColor: colors.background.card,
-                    borderColor: colors.border.primary,
-                  }}
-                  onClick={() => handleEventClick(event)}
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <h3
-                        className="mb-2 text-lg font-semibold"
-                        style={{ color: colors.text.primary }}
-                      >
-                        {event.title}
-                      </h3>
-                      <p
-                        className="mb-3"
-                        style={{ color: colors.text.secondary }}
-                      >
-                        {event.description}
-                      </p>
-                      <div className="flex items-center space-x-4 text-sm">
-                        <div className="flex items-center space-x-1">
-                          <Clock
-                            className="w-4 h-4"
-                            style={{ color: colors.text.tertiary }}
-                          />
-                          <span style={{ color: colors.text.tertiary }}>
-                            {event.startTime} - {event.endTime}
-                          </span>
-                        </div>
-                        <div className="flex items-center space-x-1">
-                          <MapPin
-                            className="w-4 h-4"
-                            style={{ color: colors.text.tertiary }}
-                          />
-                          <span style={{ color: colors.text.tertiary }}>
-                            {event.location}
-                          </span>
-                        </div>
-                        <div className="flex items-center space-x-1">
-                          <Users
-                            className="w-4 h-4"
-                            style={{ color: colors.text.tertiary }}
-                          />
-                          <span style={{ color: colors.text.tertiary }}>
-                            {event.attendees} attendees
-                          </span>
+              {dayEvents.map((event) => {
+                // Find the original backend event for this transformed event
+                const originalEvent = originalEvents.find(
+                  (e) => e._id === event._id || e.title === event.title
+                );
+                return (
+                  <div
+                    key={event.id}
+                    className={`p-4 rounded-lg border-l-4 shadow-sm transition-all duration-200 hover:shadow-md cursor-pointer`}
+                    style={{
+                      borderLeftColor:
+                        event.color.split("-")[1] === "08CB00"
+                          ? "#08CB00"
+                          : event.color.split("-")[1],
+                      backgroundColor: colors.background.card,
+                      borderColor: colors.border.primary,
+                    }}
+                    onClick={() => handleEventClick(originalEvent || event)}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h3
+                          className="mb-2 text-lg font-semibold"
+                          style={{ color: colors.text.primary }}
+                        >
+                          {event.title}
+                        </h3>
+                        <p
+                          className="mb-3"
+                          style={{ color: colors.text.secondary }}
+                        >
+                          {event.description}
+                        </p>
+                        <div className="flex items-center space-x-4 text-sm">
+                          <div className="flex items-center space-x-1">
+                            <Clock
+                              className="w-4 h-4"
+                              style={{ color: colors.text.tertiary }}
+                            />
+                            <span style={{ color: colors.text.tertiary }}>
+                              {event.startTime} - {event.endTime}
+                            </span>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <MapPin
+                              className="w-4 h-4"
+                              style={{ color: colors.text.tertiary }}
+                            />
+                            <span style={{ color: colors.text.tertiary }}>
+                              {event.location}
+                            </span>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <Users
+                              className="w-4 h-4"
+                              style={{ color: colors.text.tertiary }}
+                            />
+                            <span style={{ color: colors.text.tertiary }}>
+                              {event.attendees} attendees
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <div
-                        className={`p-2 rounded-full ${event.color} text-white`}
-                      >
-                        <event.icon className="w-5 h-5" />
+                      <div className="flex items-center space-x-2">
+                        <div
+                          className={`p-2 rounded-full ${event.color} text-white`}
+                        >
+                          <event.icon className="w-5 h-5" />
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -551,13 +730,28 @@ export default function CommunityEvents() {
               </div>
             </div>
 
-            <Button
-              onClick={() => setShowEventForm(true)}
-              className="px-6 py-3 bg-gradient-to-r from-[var(--pico-primary)] to-[var(--pico-secondary)] text-white border-0 hover:shadow-lg transition-all duration-300"
-            >
-              <Plus className="w-5 h-5 mr-2" />
-              Add Event
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={showUserInfo}
+                variant="outline"
+                className="px-4 py-2 text-sm"
+                style={{
+                  borderColor: colors.border.primary,
+                  color: colors.text.primary,
+                }}
+              >
+                Debug: User Info
+              </Button>
+              {canCreateEvents() && (
+                <Button
+                  onClick={() => setShowEventForm(true)}
+                  className="px-6 py-3 bg-gradient-to-r from-[var(--pico-primary)] to-[var(--pico-secondary)] text-white border-0 hover:shadow-lg transition-all duration-300"
+                >
+                  <Plus className="w-5 h-5 mr-2" />
+                  Add Event
+                </Button>
+              )}
+            </div>
           </div>
 
           <div
@@ -580,6 +774,18 @@ export default function CommunityEvents() {
                   }}
                 >
                   Today
+                </Button>
+                <Button
+                  onClick={goToEventsWeek}
+                  variant="outline"
+                  className="hover:shadow-md transition-all duration-300"
+                  style={{
+                    borderColor: colors.border.primary,
+                    color: colors.text.primary,
+                    backgroundColor: `${colors.accent.success}10`,
+                  }}
+                >
+                  Events Week
                 </Button>
                 <div className="flex items-center space-x-2">
                   <Button
@@ -671,68 +877,103 @@ export default function CommunityEvents() {
               </h3>
             </div>
             <div className="p-4">
-              <div className="space-y-3">
-                {events
-                  .filter((event) => event.date >= new Date())
-                  .sort((a, b) => a.date.getTime() - b.date.getTime())
-                  .slice(0, 3)
-                  .map((event) => (
-                    <div
-                      key={event.id}
-                      className="flex items-center p-3 space-x-3 transition-all duration-200 border rounded-lg hover:shadow-md cursor-pointer"
-                      style={{
-                        borderColor: colors.border.primary,
-                        backgroundColor: colors.background.card,
-                      }}
-                      onClick={() => handleEventClick(event)}
-                    >
+              {loading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                  <p className="text-sm text-gray-600 mt-2">
+                    Loading events...
+                  </p>
+                </div>
+              ) : error ? (
+                <div className="text-center py-8">
+                  <p className="text-sm text-red-600">
+                    Error loading events: {error}
+                  </p>
+                </div>
+              ) : events.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-sm text-gray-600">
+                    No events available (Total: {events.length})
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {(() => {
+                    console.log("All events:", events);
+                    const futureEvents = events.filter(
+                      (event) => new Date(event.startTime) >= new Date()
+                    );
+                    console.log("Future events:", futureEvents);
+                    const sortedEvents = futureEvents.sort(
+                      (a, b) =>
+                        new Date(a.startTime).getTime() -
+                        new Date(b.startTime).getTime()
+                    );
+                    console.log("Sorted events:", sortedEvents);
+                    const displayEvents = sortedEvents.slice(0, 3);
+                    console.log("Display events:", displayEvents);
+                    return displayEvents;
+                  })().map((event) => {
+                    const displayEvent = transformEventForDisplay(event);
+                    return (
                       <div
-                        className={`p-2 rounded-full ${event.color} text-white`}
+                        key={event._id}
+                        className="flex items-center p-3 space-x-3 transition-all duration-200 border rounded-lg hover:shadow-md cursor-pointer"
+                        style={{
+                          borderColor: colors.border.primary,
+                          backgroundColor: colors.background.card,
+                        }}
+                        onClick={() => handleEventClick(event)}
                       >
-                        <event.icon className="w-4 h-4" />
-                      </div>
-                      <div className="flex-1">
-                        <h4
-                          className="text-base font-medium"
-                          style={{ color: colors.text.primary }}
-                        >
-                          {event.title}
-                        </h4>
-                        <p
-                          className="text-xs line-clamp-2"
-                          style={{ color: colors.text.secondary }}
-                        >
-                          {event.description}
-                        </p>
-                        <div className="flex items-center mt-1 space-x-3 text-xs">
-                          <span style={{ color: colors.text.tertiary }}>
-                            {event.date.toLocaleDateString()}
-                          </span>
-                          <span style={{ color: colors.text.tertiary }}>
-                            {event.startTime} - {event.endTime}
-                          </span>
-                          <span style={{ color: colors.text.tertiary }}>
-                            {event.location}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="text-right">
                         <div
-                          className="text-xs font-medium"
-                          style={{ color: colors.text.primary }}
+                          className={`p-2 rounded-full ${displayEvent.color} text-white`}
                         >
-                          {event.status}
+                          <displayEvent.icon className="w-4 h-4" />
                         </div>
-                        <div
-                          className="text-xs"
-                          style={{ color: colors.text.tertiary }}
-                        >
-                          {event.category}
+                        <div className="flex-1">
+                          <h4
+                            className="text-base font-medium"
+                            style={{ color: colors.text.primary }}
+                          >
+                            {displayEvent.title}
+                          </h4>
+                          <p
+                            className="text-xs line-clamp-2"
+                            style={{ color: colors.text.secondary }}
+                          >
+                            {displayEvent.description}
+                          </p>
+                          <div className="flex items-center mt-1 space-x-3 text-xs">
+                            <span style={{ color: colors.text.tertiary }}>
+                              {displayEvent.date.toLocaleDateString()}
+                            </span>
+                            <span style={{ color: colors.text.tertiary }}>
+                              {displayEvent.startTime} - {displayEvent.endTime}
+                            </span>
+                            <span style={{ color: colors.text.tertiary }}>
+                              {displayEvent.location}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div
+                            className="text-xs font-medium"
+                            style={{ color: colors.text.primary }}
+                          >
+                            {displayEvent.status}
+                          </div>
+                          <div
+                            className="text-xs"
+                            style={{ color: colors.text.tertiary }}
+                          >
+                            {displayEvent.category}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-              </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -751,6 +992,7 @@ export default function CommunityEvents() {
           event={selectedEvent}
           isOpen={showEventDetails}
           onClose={handleCloseEventDetails}
+          onRegister={handleEventRegistration}
         />
       )}
     </Layout>

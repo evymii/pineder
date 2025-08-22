@@ -1,62 +1,71 @@
 import express from "express";
-
-// Basic CRUD Controllers
+import {
+  authMiddleware,
+  requireMentor,
+  requireStudent,
+} from "../middleware/auth";
 import {
   getAllSessions,
+  getUpcomingSessions,
   getSessionById,
   updateSession,
   deleteSession,
+  getTeamsChatUrl,
 } from "../controllers/session/sessionController";
-
-// Booking Controller
-import { createSession } from "../controllers/session/sessionBookingController";
-
-// Approval Controllers
 import {
-  approveSession,
-  rejectSession,
-} from "../controllers/session/sessionApprovalController";
-
-// Status Controllers
+  getAvailableMentors,
+  bookSession,
+  getStudentBookings,
+  cancelBooking,
+  getSessionDetails,
+} from "../controllers/session/sessionBookingController";
 import {
   getPendingSessions,
-  cancelSession,
-  completeSession,
-  addFeedback,
-} from "../controllers/session/sessionStatusController";
-
+  approveSession,
+  rejectSession,
+  getMentorSessions,
+} from "../controllers/session/sessionApprovalController";
 import {
-  authMiddleware,
-  requireStudent,
-  requireMentor,
-} from "../middleware/auth";
+  getSessionJoinInfo,
+  startSession,
+  endSession,
+  getActiveSessions,
+} from "../controllers/session/sessionJoinController";
+import { rateMentor } from "../controllers/session/ratingController";
 
 const router = express.Router();
 
-// Public routes (no auth required)
+// All routes require authentication
+router.use(authMiddleware);
+
+// General session routes
 router.get("/", getAllSessions);
+router.get("/upcoming", getUpcomingSessions);
+router.get("/active", getActiveSessions);
 router.get("/:id", getSessionById);
+router.put("/:id", updateSession);
+router.delete("/:id", deleteSession);
 
-// Protected routes (auth required)
-// Session CRUD (students can book, users can update/delete own)
-router.post("/", authMiddleware, requireStudent, createSession);
-router.put("/:id", authMiddleware, updateSession);
-router.delete("/:id", authMiddleware, deleteSession);
+// Booking routes (students)
+router.get("/mentors/available", requireStudent, getAvailableMentors);
+router.post("/book", requireStudent, bookSession);
+router.get("/bookings/student", requireStudent, getStudentBookings);
+router.delete("/bookings/:sessionId", requireStudent, cancelBooking);
+router.get("/bookings/:sessionId/details", getSessionDetails);
 
-// Mentor-only routes
-router.get(
-  "/mentor/:mentorId/pending",
-  authMiddleware,
-  requireMentor,
-  getPendingSessions
-); // View pending sessions
-// Mentor session management
-router.post("/:id/approve", authMiddleware, requireMentor, approveSession);
-router.post("/:id/reject", authMiddleware, requireMentor, rejectSession);
-router.post("/:id/complete", authMiddleware, requireMentor, completeSession);
+// Approval routes (mentors)
+router.get("/pending", requireMentor, getPendingSessions);
+router.post("/:sessionId/approve", requireMentor, approveSession);
+router.post("/:sessionId/reject", requireMentor, rejectSession);
+router.get("/mentor/all", requireMentor, getMentorSessions);
 
-// General session management (mentor or student)
-router.post("/:id/cancel", authMiddleware, cancelSession);
-router.post("/:id/feedback", authMiddleware, addFeedback);
+// Join routes
+router.get("/:sessionId/join", getSessionJoinInfo);
+router.get("/:sessionId/teams-chat", getTeamsChatUrl);
+router.post("/:sessionId/start", requireMentor, startSession);
+router.post("/:sessionId/end", requireMentor, endSession);
+
+// Rating routes
+router.post("/:sessionId/rate", requireStudent, rateMentor);
 
 export default router;

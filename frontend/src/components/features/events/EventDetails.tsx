@@ -13,6 +13,9 @@ import {
   Minus,
   AlertCircle,
   CheckCircle,
+  BookOpen,
+  Mic,
+  Video,
 } from "lucide-react";
 import { Button } from "../../../design/system/button";
 import {
@@ -23,37 +26,48 @@ import {
 } from "../../../design/system/card";
 import { Badge } from "../../../design/system/badge";
 import { useTheme } from "../../../core/contexts/ThemeContext";
+import { Event } from "../../../core/hooks/useEvents";
+import { useUser } from "@clerk/nextjs";
 
 interface EventDetailsProps {
-  event: {
-    id: number;
-    title: string;
-    startTime: string;
-    endTime: string;
-    date: Date;
-    endDate: Date;
-    type: string;
-    status: string;
-    icon: any;
-    description: string;
-    location: string;
-    attendees: number;
-    category: string;
-    color: string;
-  };
+  event: Event;
   isOpen: boolean;
   onClose: () => void;
+  onRegister?: (event: Event) => void;
 }
 
-export function EventDetails({ event, isOpen, onClose }: EventDetailsProps) {
+export function EventDetails({
+  event,
+  isOpen,
+  onClose,
+  onRegister,
+}: EventDetailsProps) {
+  console.log("EventDetails - event object:", event);
+  console.log("EventDetails - event.eventType:", event?.eventType);
+  console.log("EventDetails - event.startTime:", event?.startTime);
+  console.log("EventDetails - event.endTime:", event?.endTime);
+  console.log("EventDetails - event.eventId:", event?.eventId);
+
   const { colors, isDarkMode } = useTheme();
+  const { user } = useUser();
   const [isBookmarked, setIsBookmarked] = useState(false);
-  const [isRegistered, setIsRegistered] = useState(false);
+  const [isRegistered, setIsRegistered] = useState(
+    event.registeredStudents?.includes(user?.id || "") || false
+  );
   const [showShareMenu, setShowShareMenu] = useState(false);
 
   if (!isOpen) return null;
 
-  const formatDate = (date: Date) => {
+  const formatDate = (dateString: string) => {
+    console.log("formatDate called with:", dateString);
+    const date = new Date(dateString);
+    console.log("Parsed date:", date);
+    console.log("Is valid date:", !isNaN(date.getTime()));
+    
+    if (isNaN(date.getTime())) {
+      return "Invalid Date";
+    }
+    
     return date.toLocaleDateString("en-US", {
       weekday: "long",
       year: "numeric",
@@ -62,29 +76,74 @@ export function EventDetails({ event, isOpen, onClose }: EventDetailsProps) {
     });
   };
 
-  const formatTime = (time: string) => {
-    const [hours, minutes] = time.split(":");
-    const hour = parseInt(hours);
-    const ampm = hour >= 12 ? "PM" : "AM";
-    const displayHour = hour % 12 || 12;
-    return `${displayHour}:${minutes} ${ampm}`;
+  const formatTime = (dateString: string) => {
+    console.log("formatTime called with:", dateString);
+    const date = new Date(dateString);
+    console.log("Parsed date for time:", date);
+    console.log("Is valid date for time:", !isNaN(date.getTime()));
+    
+    if (isNaN(date.getTime())) {
+      return "Invalid Date";
+    }
+    
+    return date.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case "open":
-        return colors.accent.success;
-      case "almost full":
-        return colors.accent.warning;
-      case "full":
-        return colors.accent.error;
+  const getStatusColor = () => {
+    const isFull = event.currentParticipants >= (event.maxParticipants || 0);
+    return isFull ? colors.accent.error : colors.accent.success;
+  };
+
+  const getStatusText = () => {
+    const isFull = event.currentParticipants >= (event.maxParticipants || 0);
+    return isFull ? "Full" : "Open";
+  };
+
+  // Helper functions to get icon and color for event type
+  const getEventIcon = (eventType: string) => {
+    console.log("getEventIcon called with:", eventType);
+    if (!eventType) return Calendar;
+
+    switch (eventType) {
+      case "workshop":
+        return BookOpen;
+      case "discussion":
+        return Mic;
+      case "webinar":
+        return Video;
+      case "q&a":
+        return Users;
       default:
-        return colors.accent.primary;
+        return Calendar;
+    }
+  };
+
+  const getEventColor = (eventType: string) => {
+    console.log("getEventColor called with:", eventType);
+    if (!eventType) return "bg-indigo-500";
+
+    switch (eventType) {
+      case "workshop":
+        return "bg-blue-500";
+      case "discussion":
+        return "bg-green-500";
+      case "webinar":
+        return "bg-purple-500";
+      case "q&a":
+        return "bg-orange-500";
+      default:
+        return "bg-indigo-500";
     }
   };
 
   const handleRegister = () => {
-    setIsRegistered(!isRegistered);
+    if (onRegister) {
+      onRegister(event);
+      setIsRegistered(!isRegistered);
+    }
   };
 
   const handleBookmark = () => {
@@ -126,22 +185,32 @@ export function EventDetails({ event, isOpen, onClose }: EventDetailsProps) {
             <div className="p-6">
               <div className="flex items-start justify-between">
                 <div className="flex items-start space-x-4">
-                  <div className={`p-3 rounded-full ${event.color} text-white`}>
-                    <event.icon className="w-8 h-8" />
+                  <div
+                    className={`p-3 rounded-full ${getEventColor(
+                      event.eventType || ""
+                    )} text-white`}
+                  >
+                    {(() => {
+                      const IconComponent = getEventIcon(event.eventType || "");
+                      return <IconComponent className="w-8 h-8" />;
+                    })()}
                   </div>
                   <div className="text-white">
                     <h2 className="text-2xl font-bold mb-2">{event.title}</h2>
                     <div className="flex items-center space-x-4 text-sm">
                       <Badge className="bg-white/20 text-white border-white/30">
-                        {event.type}
+                        {event.eventType
+                          ? event.eventType.charAt(0).toUpperCase() +
+                            event.eventType.slice(1)
+                          : "Event"}
                       </Badge>
                       <Badge
                         style={{
-                          backgroundColor: getStatusColor(event.status),
+                          backgroundColor: getStatusColor(),
                           color: colors.text.inverse,
                         }}
                       >
-                        {event.status}
+                        {getStatusText()}
                       </Badge>
                     </div>
                   </div>
@@ -186,7 +255,7 @@ export function EventDetails({ event, isOpen, onClose }: EventDetailsProps) {
                         className="text-sm"
                         style={{ color: colors.text.secondary }}
                       >
-                        {formatDate(event.date)}
+                        {formatDate(event.startTime)}
                       </p>
                     </div>
                   </div>
@@ -280,7 +349,7 @@ export function EventDetails({ event, isOpen, onClose }: EventDetailsProps) {
                         className="text-sm"
                         style={{ color: colors.text.secondary }}
                       >
-                        {event.attendees} registered
+                        {event.currentParticipants} registered
                       </p>
                     </div>
                   </div>
@@ -351,7 +420,7 @@ export function EventDetails({ event, isOpen, onClose }: EventDetailsProps) {
                       className="text-sm"
                       style={{ color: colors.text.secondary }}
                     >
-                      #{event.id.toString().padStart(4, "0")}
+                      {event.eventId}
                     </p>
                   </div>
                 </div>

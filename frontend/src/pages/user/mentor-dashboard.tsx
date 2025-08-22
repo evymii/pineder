@@ -4,6 +4,9 @@ import { motion } from "framer-motion";
 import { useTheme } from "../../core/contexts/ThemeContext";
 import { useUser } from "@clerk/nextjs";
 import { Navigation } from "../../components/layout/Navigation";
+import AvailabilityManager from "../../components/features/mentors/AvailabilityManager";
+import { useMentorDashboard } from "../../core/hooks/useMentorDashboard";
+import { useSessionBooking } from "../../core/hooks/useSessionBooking";
 
 import {
   Card,
@@ -28,39 +31,65 @@ import {
   Check,
   X,
   Eye,
+  Video,
 } from "lucide-react";
 
 interface Session {
-  id: number;
-  studentName: string;
+  _id: string;
+  studentId: {
+    userId: {
+      firstName: string;
+      lastName: string;
+      email: string;
+      avatar: string;
+    };
+    grade: string;
+    subjects: string[];
+  };
   topic: string;
-  date: string;
-  time: string;
-  status: "upcoming" | "completed" | "cancelled" | "pending";
-  duration: string;
-  studentEmail: string;
+  startTime: string;
+  endTime: string;
+  status: "requested" | "approved" | "scheduled" | "completed" | "cancelled";
+  duration: number;
+  createdAt: string;
+  zoomJoinUrl?: string;
+  zoomStartUrl?: string;
+  zoomMeetingId?: string;
+  zoomPassword?: string;
+  meetingProvider?: string;
 }
 
 interface SessionRequest {
-  id: number;
-  studentName: string;
+  _id: string;
+  studentId: {
+    userId: {
+      firstName: string;
+      lastName: string;
+      email: string;
+      avatar: string;
+    };
+    grade: string;
+    subjects: string[];
+  };
   topic: string;
-  date: string;
-  time: string;
-  duration: string;
-  studentEmail: string;
-  message: string;
-  requestedAt: string;
+  startTime: string;
+  endTime: string;
+  status: "requested";
+  duration: number;
+  createdAt: string;
+  message?: string;
 }
 
 interface Student {
-  id: number;
-  name: string;
+  _id: string;
+  firstName: string;
+  lastName: string;
   email: string;
-  sessionsCompleted: number;
-  lastSession: string;
-  progress: number;
   avatar: string;
+  totalSessions: number;
+  completedSessions: number;
+  progressPercentage: number;
+  lastSession: string;
 }
 
 interface Analytics {
@@ -75,110 +104,134 @@ interface Analytics {
 const MentorDashboard = () => {
   const { isDarkMode, colors } = useTheme();
   const { user } = useUser();
+  const { sessions, sessionRequests, students, analytics, isLoading, error } =
+    useMentorDashboard();
+  const {
+    acceptSession,
+    denySession,
+    isLoading: isProcessing,
+  } = useSessionBooking();
 
   const cardBg = isDarkMode
     ? "bg-gradient-to-br from-white/10 via-white/5 to-white/10 backdrop-blur-xl border-white/20"
     : "bg-white border-black/20";
 
-  // Mock data
-  const [sessions, setSessions] = useState<Session[]>([
-    {
-      id: 1,
-      studentName: "Alex Chen",
-      topic: "Advanced React Patterns",
-      date: "2024-01-15",
-      time: "14:00",
-      status: "upcoming",
-      duration: "1 hour",
-      studentEmail: "alex.chen@nest.edu.mn",
-    },
-    {
-      id: 2,
-      studentName: "Sarah Kim",
-      topic: "Machine Learning Fundamentals",
-      date: "2024-01-16",
-      time: "10:00",
-      status: "upcoming",
-      duration: "1.5 hours",
-      studentEmail: "sarah.kim@nest.edu.mn",
-    },
-    {
-      id: 3,
-      studentName: "Mike Johnson",
-      topic: "Web Security Best Practices",
-      date: "2024-01-14",
-      time: "16:00",
-      status: "completed",
-      duration: "1 hour",
-      studentEmail: "mike.johnson@nest.edu.mn",
-    },
-  ]);
+  // Show loading state
+  if (isLoading) {
+    return (
+      <>
+        <Head>
+          <title>Mentor Dashboard | Pineder</title>
+        </Head>
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-900 dark:to-gray-800">
+          <Navigation />
+          <div className="flex items-center justify-center min-h-screen">
+            <div className="text-center">
+              <div className="w-12 h-12 mx-auto mb-4 border-b-2 border-blue-600 rounded-full animate-spin"></div>
+              <p className="text-gray-600 dark:text-gray-400">
+                Loading dashboard...
+              </p>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
 
-  const [sessionRequests, setSessionRequests] = useState<SessionRequest[]>([
-    {
-      id: 1,
-      studentName: "Emily Davis",
-      topic: "Data Structures & Algorithms",
-      date: "2024-01-20",
-      time: "15:00",
-      duration: "1 hour",
-      studentEmail: "emily.davis@nest.edu.mn",
-      message:
-        "I need help understanding binary trees and graph algorithms. Can we go through some practice problems?",
-      requestedAt: "2 hours ago",
-    },
-    {
-      id: 2,
-      studentName: "David Wilson",
-      topic: "Cloud Architecture Design",
-      date: "2024-01-22",
-      time: "11:00",
-      duration: "1.5 hours",
-      studentEmail: "david.wilson@nest.edu.mn",
-      message:
-        "I'm working on a project and need guidance on AWS services and best practices for scalability.",
-      requestedAt: "1 day ago",
-    },
-  ]);
+  // Show error state
+  if (error) {
+    return (
+      <>
+        <Head>
+          <title>Mentor Dashboard | Pineder</title>
+        </Head>
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-900 dark:to-gray-800">
+          <Navigation />
+          <div className="flex items-center justify-center min-h-screen">
+            <div className="text-center">
+              <div className="w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
+                <AlertCircle className="w-8 h-8 text-red-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                Error Loading Dashboard
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400">{error}</p>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
 
-  const [students] = useState<Student[]>([
-    {
-      id: 1,
-      name: "Alex Chen",
-      email: "alex.chen@nest.edu.mn",
-      sessionsCompleted: 5,
-      lastSession: "2 days ago",
-      progress: 85,
-      avatar: "",
-    },
-    {
-      id: 2,
-      name: "Sarah Kim",
-      email: "sarah.kim@nest.edu.mn",
-      sessionsCompleted: 3,
-      lastSession: "1 week ago",
-      progress: 60,
-      avatar: "",
-    },
-    {
-      id: 3,
-      name: "Mike Johnson",
-      email: "mike.johnson@nest.edu.mn",
-      sessionsCompleted: 8,
-      lastSession: "3 days ago",
-      progress: 95,
-      avatar: "",
-    },
-  ]);
+  // Helper functions for data formatting
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString();
+  };
 
-  const [analytics] = useState<Analytics>({
-    totalSessions: 45,
-    completedSessions: 42,
-    totalStudents: 12,
-    averageRating: 4.8,
-    sessionHours: 38,
-    pendingRequests: 2,
-  });
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  };
+
+  const formatDuration = (durationMinutes: number) => {
+    const hours = Math.floor(durationMinutes / 60);
+    const minutes = durationMinutes % 60;
+    if (hours > 0) {
+      return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
+    }
+    return `${minutes}m`;
+  };
+
+  const getTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInMs = now.getTime() - date.getTime();
+    const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+    const diffInDays = Math.floor(diffInHours / 24);
+
+    if (diffInDays > 0) {
+      return `${diffInDays} day${diffInDays > 1 ? "s" : ""} ago`;
+    } else if (diffInHours > 0) {
+      return `${diffInHours} hour${diffInHours > 1 ? "s" : ""} ago`;
+    } else {
+      return "Just now";
+    }
+  };
+
+  const handleAcceptRequest = async (requestId: string) => {
+    const result = await acceptSession(requestId);
+    if (result.success) {
+      alert(result.message);
+      // Refresh the dashboard data
+      window.location.reload();
+    } else {
+      alert(`Error: ${result.message}`);
+    }
+  };
+
+  const handleDenyRequest = async (requestId: string) => {
+    const reason = prompt("Please provide a reason for denying this request:");
+    if (reason !== null) {
+      const result = await denySession(requestId, reason);
+      if (result.success) {
+        alert(result.message);
+        // Refresh the dashboard data
+        window.location.reload();
+      } else {
+        alert(`Error: ${result.message}`);
+      }
+    }
+  };
+
+  const handleJoinSession = (session: Session) => {
+    // Use the Zoom meeting URL from the session data
+    if (session.zoomJoinUrl) {
+      window.open(session.zoomJoinUrl, "_blank");
+    } else {
+      alert("Meeting link not available. Please contact support.");
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -192,39 +245,6 @@ const MentorDashboard = () => {
         return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300";
       default:
         return "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300";
-    }
-  };
-
-  const handleAcceptRequest = (requestId: number) => {
-    const request = sessionRequests.find((r) => r.id === requestId);
-    if (request) {
-      // Add to sessions
-      const newSession: Session = {
-        id: Date.now(),
-        studentName: request.studentName,
-        topic: request.topic,
-        date: request.date,
-        time: request.time,
-        status: "upcoming",
-        duration: request.duration,
-        studentEmail: request.studentEmail,
-      };
-      setSessions((prev) => [...prev, newSession]);
-
-      // Remove from requests
-      setSessionRequests((prev) => prev.filter((r) => r.id !== requestId));
-
-      // Show success message (you can add a toast notification here)
-    }
-  };
-
-  const handleDenyRequest = (requestId: number) => {
-    const request = sessionRequests.find((r) => r.id === requestId);
-    if (request) {
-      // Remove from requests
-      setSessionRequests((prev) => prev.filter((r) => r.id !== requestId));
-
-      // Show success message (you can add a toast notification here)
     }
   };
 
@@ -425,7 +445,7 @@ const MentorDashboard = () => {
             </motion.div>
 
             {/* Session Requests - Integrated Notifications */}
-            {sessionRequests.length > 0 && (
+            {sessionRequests.length > 0 ? (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -458,7 +478,7 @@ const MentorDashboard = () => {
                     <div className="space-y-4">
                       {sessionRequests.map((request) => (
                         <div
-                          key={request.id}
+                          key={request._id}
                           className={`p-4 rounded-lg border transition-colors duration-200 ${
                             isDarkMode
                               ? "bg-[#333333] border-gray-700"
@@ -470,13 +490,14 @@ const MentorDashboard = () => {
                               className="font-semibold"
                               style={{ color: colors.text.primary }}
                             >
-                              {request.studentName}
+                              {request.studentId.userId.firstName}{" "}
+                              {request.studentId.userId.lastName}
                             </h4>
                             <span
                               className="text-sm"
                               style={{ color: colors.text.secondary }}
                             >
-                              {request.requestedAt}
+                              {getTimeAgo(request.createdAt)}
                             </span>
                           </div>
                           <p
@@ -489,32 +510,38 @@ const MentorDashboard = () => {
                             className="text-sm mb-2"
                             style={{ color: colors.text.secondary }}
                           >
-                            <strong>Date:</strong> {request.date} at{" "}
-                            {request.time} ({request.duration})
+                            <strong>Date:</strong>{" "}
+                            {formatDate(request.startTime)} at{" "}
+                            {formatTime(request.startTime)} (
+                            {formatDuration(request.duration)})
                           </p>
-                          <p
-                            className="text-sm mb-3"
-                            style={{ color: colors.text.secondary }}
-                          >
-                            <strong>Message:</strong> {request.message}
-                          </p>
+                          {request.message && (
+                            <p
+                              className="text-sm mb-3"
+                              style={{ color: colors.text.secondary }}
+                            >
+                              <strong>Message:</strong> {request.message}
+                            </p>
+                          )}
                           <div className="flex items-center space-x-2">
                             <Button
                               size="sm"
                               className="text-white bg-[#08CB00] hover:bg-[#06a800]"
-                              onClick={() => handleAcceptRequest(request.id)}
+                              onClick={() => handleAcceptRequest(request._id)}
+                              disabled={isProcessing}
                             >
                               <Check className="w-4 h-4 mr-1" />
-                              Accept
+                              {isProcessing ? "Processing..." : "Accept"}
                             </Button>
                             <Button
                               size="sm"
                               variant="outline"
                               className="text-red-500 border-red-500 hover:bg-red-500 hover:text-white"
-                              onClick={() => handleDenyRequest(request.id)}
+                              onClick={() => handleDenyRequest(request._id)}
+                              disabled={isProcessing}
                             >
                               <X className="w-4 h-4 mr-1" />
-                              Deny
+                              {isProcessing ? "Processing..." : "Deny"}
                             </Button>
                             <Button
                               size="sm"
@@ -527,6 +554,31 @@ const MentorDashboard = () => {
                           </div>
                         </div>
                       ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ) : (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+                className="mb-8"
+              >
+                <Card
+                  className={`${cardBg} shadow-lg border-0 border-l-4 border-green-500`}
+                >
+                  <CardContent className="p-6">
+                    <div className="flex items-center space-x-3">
+                      <CheckCircle className="w-6 h-6 text-green-500" />
+                      <div>
+                        <h3 className="font-semibold text-green-800 dark:text-green-300">
+                          No Pending Requests
+                        </h3>
+                        <p className="text-sm text-green-600 dark:text-green-400">
+                          All session requests have been processed. Great job!
+                        </p>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -553,44 +605,75 @@ const MentorDashboard = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      {sessions
-                        .filter((session) => session.status === "upcoming")
-                        .map((session) => (
-                          <div
-                            key={session.id}
-                            className={`p-4 rounded-lg border transition-colors duration-200 ${
-                              isDarkMode
-                                ? "bg-[#333333] border-gray-700"
-                                : "bg-gray-50 border-gray-200"
-                            }`}
-                          >
-                            <div className="flex items-center justify-between mb-2">
-                              <h4
-                                className="font-semibold"
-                                style={{ color: colors.text.primary }}
-                              >
-                                {session.studentName}
-                              </h4>
-                              <Badge className={getStatusColor(session.status)}>
-                                {session.status}
-                              </Badge>
-                            </div>
-                            <p
-                              className="text-sm mb-2"
-                              style={{ color: colors.text.secondary }}
+                      {sessions.filter((session) =>
+                        ["approved", "scheduled"].includes(session.status)
+                      ).length > 0 ? (
+                        sessions
+                          .filter((session) =>
+                            ["approved", "scheduled"].includes(session.status)
+                          )
+                          .map((session) => (
+                            <div
+                              key={session._id}
+                              className={`p-4 rounded-lg border transition-colors duration-200 ${
+                                isDarkMode
+                                  ? "bg-[#333333] border-gray-700"
+                                  : "bg-gray-50 border-gray-200"
+                              }`}
                             >
-                              {session.topic}
-                            </p>
-                            <div className="flex items-center justify-between text-sm">
-                              <span style={{ color: colors.text.secondary }}>
-                                {session.date} at {session.time}
-                              </span>
-                              <span style={{ color: colors.text.secondary }}>
-                                {session.duration}
-                              </span>
+                              <div className="flex items-center justify-between mb-2">
+                                <h4
+                                  className="font-semibold"
+                                  style={{ color: colors.text.primary }}
+                                >
+                                  {session.studentId.userId.firstName}{" "}
+                                  {session.studentId.userId.lastName}
+                                </h4>
+                                <Badge
+                                  className={getStatusColor(session.status)}
+                                >
+                                  {session.status}
+                                </Badge>
+                              </div>
+                              <p
+                                className="text-sm mb-2"
+                                style={{ color: colors.text.secondary }}
+                              >
+                                {session.topic}
+                              </p>
+                              <div className="flex items-center justify-between text-sm">
+                                <span style={{ color: colors.text.secondary }}>
+                                  {formatDate(session.startTime)} at{" "}
+                                  {formatTime(session.startTime)}
+                                </span>
+                                <span style={{ color: colors.text.secondary }}>
+                                  {formatDuration(session.duration)}
+                                </span>
+                              </div>
+                              {/* Join Session Button for approved/scheduled sessions */}
+                              <div className="mt-3">
+                                <Button
+                                  size="sm"
+                                  className="w-full bg-[#58CC02] hover:bg-[#46A302] text-white font-bold"
+                                  onClick={() => handleJoinSession(session)}
+                                >
+                                  <Video className="w-4 h-4 mr-2" />
+                                  Join Session
+                                </Button>
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          ))
+                      ) : (
+                        <div className="text-center py-8">
+                          <Calendar className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                          <h3 className="text-lg font-semibold text-gray-600 dark:text-gray-400 mb-2">
+                            No Upcoming Sessions
+                          </h3>
+                          <p className="text-sm text-gray-500 dark:text-gray-500">
+                            You don&apos;t have any upcoming sessions scheduled.
+                          </p>
+                        </div>
+                      )}
                       <Button
                         variant="outline"
                         className="w-full border-[var(--pico-primary)] text-[var(--pico-primary)] hover:bg-[var(--pico-primary)] hover:text-white"
@@ -622,44 +705,59 @@ const MentorDashboard = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      {students.slice(0, 3).map((student) => (
-                        <div
-                          key={student.id}
-                          className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-[#333333] transition-colors duration-200"
-                        >
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--pico-primary)] to-[var(--pico-secondary)] flex items-center justify-center">
-                            <User className="w-5 h-5 text-white" />
-                          </div>
-                          <div className="flex-1">
-                            <h4
-                              className="font-semibold"
-                              style={{ color: colors.text.primary }}
-                            >
-                              {student.name}
-                            </h4>
-                            <p
-                              className="text-sm"
-                              style={{ color: colors.text.secondary }}
-                            >
-                              {student.sessionsCompleted} sessions completed
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <div className="w-16 h-2 overflow-hidden bg-gray-200 rounded-full dark:bg-gray-700">
-                              <div
-                                className="h-full bg-gradient-to-r from-[var(--pico-primary)] to-[var(--pico-secondary)]"
-                                style={{ width: `${student.progress}%` }}
-                              />
+                      {students.length > 0 ? (
+                        students.slice(0, 3).map((student) => (
+                          <div
+                            key={student._id}
+                            className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-[#333333] transition-colors duration-200"
+                          >
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--pico-primary)] to-[var(--pico-secondary)] flex items-center justify-center">
+                              <User className="w-5 h-5 text-white" />
                             </div>
-                            <p
-                              className="text-xs mt-1"
-                              style={{ color: colors.text.secondary }}
-                            >
-                              {student.progress}%
-                            </p>
+                            <div className="flex-1">
+                              <h4
+                                className="font-semibold"
+                                style={{ color: colors.text.primary }}
+                              >
+                                {student.firstName} {student.lastName}
+                              </h4>
+                              <p
+                                className="text-sm"
+                                style={{ color: colors.text.secondary }}
+                              >
+                                {student.completedSessions} sessions completed
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <div className="w-16 h-2 overflow-hidden bg-gray-200 rounded-full dark:bg-gray-700">
+                                <div
+                                  className="h-full bg-gradient-to-r from-[var(--pico-primary)] to-[var(--pico-secondary)]"
+                                  style={{
+                                    width: `${student.progressPercentage}%`,
+                                  }}
+                                />
+                              </div>
+                              <p
+                                className="text-xs mt-1"
+                                style={{ color: colors.text.secondary }}
+                              >
+                                {student.progressPercentage}%
+                              </p>
+                            </div>
                           </div>
+                        ))
+                      ) : (
+                        <div className="text-center py-8">
+                          <Users className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                          <h3 className="text-lg font-semibold text-gray-600 dark:text-gray-400 mb-2">
+                            No Students Yet
+                          </h3>
+                          <p className="text-sm text-gray-500 dark:text-gray-500">
+                            You haven&apos;t had any students yet. Start
+                            mentoring to see students here!
+                          </p>
                         </div>
-                      ))}
+                      )}
                       <Button
                         variant="outline"
                         className="w-full border-[var(--pico-primary)] text-[var(--pico-primary)] hover:bg-[var(--pico-primary)] hover:text-white"
@@ -673,6 +771,16 @@ const MentorDashboard = () => {
                 </Card>
               </motion.div>
             </div>
+
+            {/* Availability Manager */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+              className="mb-8"
+            >
+              <AvailabilityManager />
+            </motion.div>
 
             {/* Performance Overview */}
             <motion.div

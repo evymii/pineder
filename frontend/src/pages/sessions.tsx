@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import Head from "next/head";
 import { motion } from "framer-motion";
 import { useTheme } from "../core/contexts/ThemeContext";
+import { useUser } from "@clerk/nextjs";
 import { Layout } from "../components/layout/Layout";
 import {
   SessionTabs,
@@ -12,7 +13,7 @@ import {
   RatingDialog,
   CustomFooter,
 } from "../components/features/sessions";
-import { mentorCategories } from "../core/lib/data/mentors";
+import { useSessions } from "../core/hooks/sessions/useSessions";
 
 interface SessionData {
   id: string;
@@ -59,11 +60,17 @@ type AnySession = SessionData | GroupSessionData;
 
 export default function SessionsPage() {
   const { colors } = useTheme();
-  const [oneOnOneSessions, setOneOnOneSessions] = useState<SessionData[]>([]);
-  const [groupSessions, setGroupSessions] = useState<GroupSessionData[]>([]);
+  const { user } = useUser();
+  const {
+    sessions,
+    isLoading,
+    upcomingSessions,
+    completedSessions,
+    cancelledSessions,
+  } = useSessions();
   const [activeTab, setActiveTab] = useState<
     "group" | "oneonone" | "all" | "calendar"
-  >("group");
+  >("oneonone");
   const [showRescheduleDialog, setShowRescheduleDialog] = useState(false);
   const [showRatingDialog, setShowRatingDialog] = useState(false);
   const [selectedSession, setSelectedSession] = useState<
@@ -72,98 +79,19 @@ export default function SessionsPage() {
   const [rescheduleReason, setRescheduleReason] = useState("");
   const [rating, setRating] = useState(0);
   const [ratingComment, setRatingComment] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const generateSessions = () => {
-      const allMentors = mentorCategories.flatMap(
-        (category) => category.mentors
-      );
-
-      // Generate 1 on 1 sessions (first 5 mentors)
-      const mockOneOnOneSessions: SessionData[] = [];
-      allMentors.forEach((mentor, index) => {
-        if (index < 5) {
-          mockOneOnOneSessions.push({
-            id: `oneonone-${index}`,
-            title: `${mentor.expertise[0]} 1-on-1 Session`,
-            mentor: {
-              name: mentor.name,
-              image: mentor.image,
-              expertise: mentor.expertise,
-              rating: mentor.rating,
-            },
-            date: mentor.availableTimes[0],
-            time: "2:00 PM",
-            status: "upcoming" as const,
-            duration: "1 hour",
-            subject: mentor.expertise[0],
-            price: 35 + index * 5,
-            studentChoice: ["coffee", "free", "ice cream"][index % 3] as
-              | "ice cream"
-              | "coffee"
-              | "free",
-            meetingLink: `https://zoom.us/j/${200000000 + index}`,
-          });
-        }
-      });
-
-      setOneOnOneSessions(mockOneOnOneSessions);
-
-      // Generate group sessions
-      const mockGroupSessions: GroupSessionData[] = [];
-      allMentors.forEach((mentor, index) => {
-        if (index < 6) {
-          mockGroupSessions.push({
-            id: `group-${index}`,
-            title: `${mentor.expertise[0]} Group Workshop`,
-            mentor: {
-              name: mentor.name,
-              image: mentor.image,
-              expertise: mentor.expertise,
-              rating: mentor.rating,
-            },
-            date: mentor.availableTimes[1] || "Tomorrow",
-            time: "4:00 PM",
-            status: "upcoming" as const,
-            duration: "2 hours",
-            subject: mentor.expertise[0],
-            price: 15 + index * 3,
-            studentChoice: ["free", "ice cream", "coffee"][index % 3] as
-              | "ice cream"
-              | "coffee"
-              | "free",
-            meetingLink: `https://zoom.us/j/${300000000 + index}`,
-            maxParticipants: 8,
-            currentParticipants: 3 + Math.floor(Math.random() * 4),
-            participants: ["You", "Student A", "Student B"],
-          });
-        }
-      });
-
-      setGroupSessions(mockGroupSessions);
-      setIsLoading(false);
-    };
-
-    generateSessions();
-  }, []);
-
-  const filteredOneOnOneSessions = oneOnOneSessions.filter((session) => {
+  // Filter sessions based on active tab
+  const filteredSessions = sessions.filter((session) => {
     if (activeTab === "all") return true;
-    if (activeTab === "oneonone") return session.status === "upcoming";
-    return false;
-  });
-
-  const filteredGroupSessions = groupSessions.filter((session) => {
-    if (activeTab === "all") return true;
-    if (activeTab === "group") return true;
+    if (activeTab === "oneonone") return true; // Show all sessions in oneonone tab
+    if (activeTab === "group") return false; // No group sessions for now
     return false;
   });
 
   const stats = {
-    total: oneOnOneSessions.length + groupSessions.length,
-    oneonone: oneOnOneSessions.length,
-    group: groupSessions.length,
+    total: sessions.length,
+    oneonone: sessions.length,
+    group: 0, // No group sessions for now
   };
 
   const getStatusColor = (status: string) => {
@@ -196,7 +124,9 @@ export default function SessionsPage() {
     if (session.meetingLink) {
       window.open(session.meetingLink, "_blank");
     } else {
-      alert("Meeting link not available yet.");
+      alert(
+        "Meeting link not available yet. Please wait for the mentor to approve the session."
+      );
     }
   };
 
@@ -205,11 +135,145 @@ export default function SessionsPage() {
     setShowRescheduleDialog(true);
   };
 
-  const handleSubmitReschedule = () => {
-    if (rescheduleReason.trim()) {
+  const handleCancelSession = (session: SessionData | GroupSessionData) => {
+    if (confirm("Are you sure you want to cancel this session?")) {
+      cancelSession(session.id);
+    }
+  };
+
+  const cancelSession = async (sessionId: string) => {
+    if (!user) {
+      alert("Please sign in to cancel sessions");
+      return;
+    }
+
+    try {
+      // Determine user role based on email domain
+      const email = user.emailAddresses[0]?.emailAddress || "";
+      let role = "student"; // default
+      if (email.endsWith("@gmail.com")) {
+        role = "mentor";
+      } else if (email.endsWith("@nest.edu.mn")) {
+        role = "student";
+      }
+
+      console.log("Cancelling session:", {
+        sessionId,
+        email,
+        role,
+        userId: user.id
+      });
+
+      const response = await fetch(
+        `${
+          process.env.NEXT_PUBLIC_API_URL || "http://localhost:5555"
+        }/api/sessions/bookings/${sessionId}`,
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            "x-user-role": role,
+            "x-user-email": email,
+            "x-user-id": user.id || "",
+          },
+        }
+      );
+
+      console.log("Cancel response status:", response.status);
+      console.log("Cancel response ok:", response.ok);
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log("Cancel response data:", data);
+        if (data.success) {
+          alert("Session cancelled successfully!");
+          // Refresh sessions
+          window.location.reload();
+        } else {
+          alert(`Error: ${data.error}`);
+        }
+      } else {
+        const errorText = await response.text();
+        console.error("Cancel error response:", errorText);
+        alert("Failed to cancel session");
+      }
+    } catch (error) {
+      console.error("Error cancelling session:", error);
+      alert("Failed to cancel session");
+    }
+  };
+
+  const handleSubmitReschedule = (newStartTime: string, newEndTime: string) => {
+    if (rescheduleReason.trim() && selectedSession) {
+      // Call backend API to request reschedule
+      requestReschedule(
+        selectedSession.id,
+        newStartTime,
+        newEndTime,
+        rescheduleReason
+      );
       setShowRescheduleDialog(false);
       setRescheduleReason("");
       setSelectedSession(null);
+    }
+  };
+
+  const requestReschedule = async (
+    sessionId: string,
+    newStartTime: string,
+    newEndTime: string,
+    reason: string
+  ) => {
+    if (!user) {
+      alert("Please sign in to request reschedule");
+      return;
+    }
+
+    try {
+      // Determine user role based on email domain
+      const email = user.emailAddresses[0]?.emailAddress || "";
+      let role = "student"; // default
+      if (email.endsWith("@gmail.com")) {
+        role = "mentor";
+      } else if (email.endsWith("@nest.edu.mn")) {
+        role = "student";
+      }
+
+      const response = await fetch(
+        `${
+          process.env.NEXT_PUBLIC_API_URL || "http://localhost:5555"
+        }/api/reschedule/${sessionId}/request`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-user-role": role,
+            "x-user-email": email,
+            "x-user-id": user.id || "",
+          },
+          body: JSON.stringify({
+            newStartTime,
+            newEndTime,
+            reason,
+          }),
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          alert("Reschedule request sent successfully!");
+          // Refresh sessions
+          window.location.reload();
+        } else {
+          alert(`Error: ${data.error}`);
+        }
+      } else {
+        alert("Failed to send reschedule request");
+      }
+    } catch (error) {
+      console.error("Error requesting reschedule:", error);
+      alert("Failed to send reschedule request");
     }
   };
 
@@ -221,7 +285,9 @@ export default function SessionsPage() {
   };
 
   const handleSubmitRating = () => {
-    if (rating > 0) {
+    if (rating > 0 && selectedSession) {
+      // Call backend API to submit rating
+      submitRating(selectedSession.id, rating, ratingComment);
       setShowRatingDialog(false);
       setRating(0);
       setRatingComment("");
@@ -229,19 +295,74 @@ export default function SessionsPage() {
     }
   };
 
-  const exportAllToGoogleCalendar = () => {
-    const allSessions = [...oneOnOneSessions, ...groupSessions];
+  const submitRating = async (
+    sessionId: string,
+    rating: number,
+    comment: string
+  ) => {
+    if (!user) {
+      alert("Please sign in to submit ratings");
+      return;
+    }
 
-    if (allSessions.length === 0) {
+    try {
+      // Determine user role based on email domain
+      const email = user.emailAddresses[0]?.emailAddress || "";
+      let role = "student"; // default
+      if (email.endsWith("@gmail.com")) {
+        role = "mentor";
+      } else if (email.endsWith("@nest.edu.mn")) {
+        role = "student";
+      }
+
+      const response = await fetch(
+        `${
+          process.env.NEXT_PUBLIC_API_URL || "http://localhost:5555"
+        }/api/sessions/${sessionId}/rate`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-user-role": role,
+            "x-user-email": email,
+            "x-user-id": user.id || "",
+          },
+          body: JSON.stringify({
+            rating,
+            comment,
+          }),
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          alert("Rating submitted successfully!");
+          // Refresh sessions
+          window.location.reload();
+        } else {
+          alert(`Error: ${data.error}`);
+        }
+      } else {
+        alert("Failed to submit rating");
+      }
+    } catch (error) {
+      console.error("Error submitting rating:", error);
+      alert("Failed to submit rating");
+    }
+  };
+
+  const exportAllToGoogleCalendar = () => {
+    if (sessions.length === 0) {
       alert("No sessions to export!");
       return;
     }
 
-    const eventTitle = `Pineder Learning Sessions - ${allSessions.length} Sessions`;
-    const eventDescription = allSessions
+    const eventTitle = `Pineder Learning Sessions - ${sessions.length} Sessions`;
+    const eventDescription = sessions
       .map(
         (session) =>
-          `• ${session.title} with ${session.mentor.name} on ${session.date} at ${session.time} (${session.duration})`
+          `• ${session.title} with ${session.mentor.name} on ${session.date} at ${session.time} (${session.duration} min)`
       )
       .join("\n");
 
@@ -270,10 +391,9 @@ export default function SessionsPage() {
   };
 
   const getCurrentSessions = () => {
-    if (activeTab === "group") return filteredGroupSessions;
-    if (activeTab === "oneonone") return filteredOneOnOneSessions;
-    if (activeTab === "all")
-      return [...filteredOneOnOneSessions, ...filteredGroupSessions];
+    if (activeTab === "group") return [];
+    if (activeTab === "oneonone") return filteredSessions;
+    if (activeTab === "all") return filteredSessions;
     return [];
   };
 
@@ -326,6 +446,7 @@ export default function SessionsPage() {
               onJoinSession={handleJoinSession}
               onRequestReschedule={handleRequestReschedule}
               onRateSession={handleRateSession}
+              onCancelSession={handleCancelSession}
               getStatusColor={getStatusColor}
               getStatusIcon={getStatusIcon}
             />

@@ -3,26 +3,12 @@ import { Plus, Calendar, Clock, Users, MapPin, BookOpen } from "lucide-react";
 import { Button } from "../../../design/system/button";
 import { Card, CardContent } from "../../../design/system/card";
 import { useTheme } from "../../../core/contexts/ThemeContext";
+import { CreateEventData } from "../../../core/hooks/useEvents";
 
 interface EventSubmissionFormProps {
-  onSubmit: (event: Omit<EventData, "id" | "createdAt">) => void;
+  onSubmit: (event: CreateEventData) => void;
   isOpen: boolean;
   onClose: () => void;
-}
-
-interface EventData {
-  id: string;
-  title: string;
-  description: string;
-  type: string;
-  date: string;
-  time: string;
-  duration: string;
-  mentor: string;
-  maxParticipants: number;
-  location: string;
-  status: "Open" | "Almost Full" | "Full";
-  createdAt: string;
 }
 
 export function EventSubmissionForm({
@@ -33,33 +19,47 @@ export function EventSubmissionForm({
   const { colors } = useTheme();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [type, setType] = useState("");
-  const [date, setDate] = useState("");
-  const [time, setTime] = useState("");
-  const [duration, setDuration] = useState("");
-  const [mentor, setMentor] = useState("");
+  const [eventType, setEventType] = useState("");
+  const [eventDate, setEventDate] = useState("");
+  const [startTime, setStartTime] = useState("");
+  const [duration, setDuration] = useState(60);
   const [maxParticipants, setMaxParticipants] = useState(20);
   const [location, setLocation] = useState("");
+  const [category, setCategory] = useState("");
 
   const eventTypes = [
-    "Workshop",
-    "Study Group",
-    "Q&A Session",
-    "Code Review",
-    "Presentation",
-    "Hackathon",
-    "Networking",
+    "workshop",
+    "discussion",
+    "seminar",
+    "meetup",
+    "webinar",
+    "q&a",
+  ];
+
+  const categories = [
+    "Frontend Development",
+    "Backend Development",
+    "Full Stack Development",
+    "Mobile Development",
+    "Data Science",
+    "Machine Learning",
+    "DevOps",
+    "Database",
+    "Cloud Computing",
+    "Cybersecurity",
+    "UI/UX Design",
+    "Architecture",
+    "General Programming",
     "Other",
   ];
 
-  const durations = [
-    "30 minutes",
-    "1 hour",
-    "1.5 hours",
-    "2 hours",
-    "3 hours",
-    "4 hours",
-    "Full day",
+  const durationOptions = [
+    { label: "30 minutes", value: 30 },
+    { label: "1 hour", value: 60 },
+    { label: "1.5 hours", value: 90 },
+    { label: "2 hours", value: 120 },
+    { label: "3 hours", value: 180 },
+    { label: "4 hours", value: 240 },
   ];
 
   const submitForm = (e: React.FormEvent) => {
@@ -68,26 +68,26 @@ export function EventSubmissionForm({
     if (
       !title.trim() ||
       !description.trim() ||
-      !type ||
-      !date ||
-      !time ||
-      !duration ||
-      !mentor.trim()
+      !eventType ||
+      !eventDate ||
+      !startTime ||
+      !category
     ) {
       return;
     }
 
-    const newEvent = {
+    const newEvent: CreateEventData = {
       title: title.trim(),
       description: description.trim(),
-      type,
-      date,
-      time,
+      eventType,
+      eventDate,
+      startTime,
       duration,
-      mentor: mentor.trim(),
       maxParticipants,
       location: location.trim() || "Online",
-      status: "Open" as const,
+      category,
+      tags: [],
+      isPublic: true,
     };
 
     onSubmit(newEvent);
@@ -95,13 +95,13 @@ export function EventSubmissionForm({
     // Reset form
     setTitle("");
     setDescription("");
-    setType("");
-    setDate("");
-    setTime("");
-    setDuration("");
-    setMentor("");
+    setEventType("");
+    setEventDate("");
+    setStartTime("");
+    setDuration(60);
     setMaxParticipants(20);
     setLocation("");
+    setCategory("");
 
     onClose();
   };
@@ -197,20 +197,20 @@ export function EventSubmissionForm({
               />
             </div>
 
-            {/* Event Type and Date */}
+            {/* Event Type and Category */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label
-                  htmlFor="type"
+                  htmlFor="eventType"
                   className="block text-sm font-semibold mb-2"
                   style={{ color: colors.text.primary }}
                 >
                   Event Type
                 </label>
                 <select
-                  id="type"
-                  value={type}
-                  onChange={(e) => setType(e.target.value)}
+                  id="eventType"
+                  value={eventType}
+                  onChange={(e) => setEventType(e.target.value)}
                   className="w-full px-3 py-2 border-2 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200"
                   style={{
                     borderColor: colors.border.primary,
@@ -220,9 +220,9 @@ export function EventSubmissionForm({
                   required
                 >
                   <option value="">Select event type</option>
-                  {eventTypes.map((eventType) => (
-                    <option key={eventType} value={eventType}>
-                      {eventType}
+                  {eventTypes.map((type) => (
+                    <option key={type} value={type}>
+                      {type.charAt(0).toUpperCase() + type.slice(1)}
                     </option>
                   ))}
                 </select>
@@ -230,17 +230,72 @@ export function EventSubmissionForm({
 
               <div>
                 <label
-                  htmlFor="date"
+                  htmlFor="category"
+                  className="block text-sm font-semibold mb-2"
+                  style={{ color: colors.text.primary }}
+                >
+                  Category
+                </label>
+                <select
+                  id="category"
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  className="w-full px-3 py-2 border-2 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200"
+                  style={{
+                    borderColor: colors.border.primary,
+                    backgroundColor: colors.background.primary,
+                    color: colors.text.primary,
+                  }}
+                  required
+                >
+                  <option value="">Select category</option>
+                  {categories.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Event Date and Time */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label
+                  htmlFor="eventDate"
                   className="block text-sm font-semibold mb-2"
                   style={{ color: colors.text.primary }}
                 >
                   Event Date
                 </label>
                 <input
-                  id="date"
+                  id="eventDate"
                   type="date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
+                  value={eventDate}
+                  onChange={(e) => setEventDate(e.target.value)}
+                  className="w-full px-3 py-2 border-2 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200"
+                  style={{
+                    borderColor: colors.border.primary,
+                    backgroundColor: colors.background.primary,
+                    color: colors.text.primary,
+                  }}
+                  required
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="startTime"
+                  className="block text-sm font-semibold mb-2"
+                  style={{ color: colors.text.primary }}
+                >
+                  Start Time
+                </label>
+                <input
+                  id="startTime"
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
                   className="w-full px-3 py-2 border-2 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200"
                   style={{
                     borderColor: colors.border.primary,
@@ -252,31 +307,8 @@ export function EventSubmissionForm({
               </div>
             </div>
 
-            {/* Time and Duration */}
+            {/* Duration and Max Participants */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label
-                  htmlFor="time"
-                  className="block text-sm font-semibold mb-2"
-                  style={{ color: colors.text.primary }}
-                >
-                  Start Time
-                </label>
-                <input
-                  id="time"
-                  type="time"
-                  value={time}
-                  onChange={(e) => setTime(e.target.value)}
-                  className="w-full px-3 py-2 border-2 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200"
-                  style={{
-                    borderColor: colors.border.primary,
-                    backgroundColor: colors.background.primary,
-                    color: colors.text.primary,
-                  }}
-                  required
-                />
-              </div>
-
               <div>
                 <label
                   htmlFor="duration"
@@ -288,7 +320,7 @@ export function EventSubmissionForm({
                 <select
                   id="duration"
                   value={duration}
-                  onChange={(e) => setDuration(e.target.value)}
+                  onChange={(e) => setDuration(parseInt(e.target.value))}
                   className="w-full px-3 py-2 border-2 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200"
                   style={{
                     borderColor: colors.border.primary,
@@ -298,39 +330,12 @@ export function EventSubmissionForm({
                   required
                 >
                   <option value="">Select duration</option>
-                  {durations.map((dur) => (
-                    <option key={dur} value={dur}>
-                      {dur}
+                  {durationOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
                     </option>
                   ))}
                 </select>
-              </div>
-            </div>
-
-            {/* Mentor and Max Participants */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label
-                  htmlFor="mentor"
-                  className="block text-sm font-semibold mb-2"
-                  style={{ color: colors.text.primary }}
-                >
-                  Host/Mentor
-                </label>
-                <input
-                  id="mentor"
-                  type="text"
-                  value={mentor}
-                  onChange={(e) => setMentor(e.target.value)}
-                  placeholder="Your name or mentor's name"
-                  className="w-full px-3 py-2 border-2 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200"
-                  style={{
-                    borderColor: colors.border.primary,
-                    backgroundColor: colors.background.primary,
-                    color: colors.text.primary,
-                  }}
-                  required
-                />
               </div>
 
               <div>

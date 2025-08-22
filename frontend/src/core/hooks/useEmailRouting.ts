@@ -14,8 +14,8 @@ export interface EmailRoutingConfig {
 const defaultConfig: EmailRoutingConfig = {
   studentDomains: ["@nest.edu.mn"],
   mentorDomains: ["@gmail.com"],
-  studentRedirectPath: "/",
-  mentorRedirectPath: "/mentor-dashboard",
+  studentRedirectPath: "/profile/student",
+  mentorRedirectPath: "/profile/mentor",
   otherRedirectPath: "/", // Fallback for other email domains
 };
 

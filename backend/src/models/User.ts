@@ -6,11 +6,19 @@ export interface IUser extends Document {
   lastName: string;
   role: string;
   avatar?: string;
-  avatarPublicId?: string; // Cloudinary public ID for avatar management
+  backgroundImage?: string;
+
   bio?: string;
   location?: string;
   phone?: string;
   dateOfBirth?: Date;
+  studentCode?: string; // For students: #STU2024001
+  major?: string; // For students: "Computer Science & Artificial Intelligence"
+  links?: {
+    github?: string;
+    portfolio?: string;
+    linkedIn?: string;
+  };
   profileCompleted: boolean;
   preferences: {
     notifications: boolean;
@@ -44,9 +52,10 @@ const userSchema = new Schema<IUser>(
     avatar: {
       type: String,
     },
-    avatarPublicId: {
+    backgroundImage: {
       type: String,
     },
+
     bio: {
       type: String,
       maxlength: 500,
@@ -59,6 +68,17 @@ const userSchema = new Schema<IUser>(
     },
     dateOfBirth: {
       type: Date,
+    },
+    studentCode: {
+      type: String,
+    },
+    major: {
+      type: String,
+    },
+    links: {
+      github: String,
+      portfolio: String,
+      linkedIn: String,
     },
     profileCompleted: {
       type: Boolean,

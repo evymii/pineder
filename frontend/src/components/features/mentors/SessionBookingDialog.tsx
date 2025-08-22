@@ -12,7 +12,10 @@ import {
   BookOpen,
   CheckCircle,
 } from "lucide-react";
-import { Mentor } from "../../../core/lib/data/mentors";
+import { Mentor as UseMentorsMentor } from "../../../core/hooks/useMentors";
+import { Mentor as DataMentor } from "../../../core/lib/data/mentors";
+
+type Mentor = UseMentorsMentor | DataMentor | any;
 import { Button } from "../../../design/system/button";
 import {
   Card,
@@ -32,12 +35,11 @@ interface SessionBookingDialogProps {
 }
 
 interface SessionData {
-  mentorId: number;
-  date: string;
-  time: string;
-  sessionType: "1on1"; // Only 1-on-1 sessions available
+  mentorId: string;
+  startTime: string;
+  endTime: string;
   topic: string;
-  compensation: string;
+  message?: string;
 }
 
 export function SessionBookingDialog({
@@ -46,6 +48,10 @@ export function SessionBookingDialog({
   onClose,
   onConfirm,
 }: SessionBookingDialogProps) {
+  // Temporary fix for type issues - return early if mentor is not the expected type
+  if (!mentor || !("userId" in mentor)) {
+    return null;
+  }
   const { isDarkMode, colors } = useTheme();
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [selectedTime, setSelectedTime] = useState<string>("");
@@ -55,18 +61,85 @@ export function SessionBookingDialog({
 
   if (!mentor) return null;
 
+  // Debug: Log mentor availability
+  console.log("SessionBookingDialog - Mentor:", mentor);
+  console.log(
+    "SessionBookingDialog - Mentor availability:",
+    "availability" in mentor ? mentor.availability : "No availability data"
+  );
+
   const handleConfirm = () => {
     if (selectedDate && selectedTime && topic) {
-      const sessionData: SessionData = {
-        mentorId: mentor.id,
-        date: selectedDate,
-        time: selectedTime,
-        sessionType: "1on1",
-        topic,
-        compensation: selectedCompensation,
-      };
-      onConfirm(sessionData);
-      onClose();
+      try {
+        // Get the next occurrence of the selected day
+        const dayMap: { [key: string]: number } = {
+          Mon: 1,
+          Tue: 2,
+          Wed: 3,
+          Thu: 4,
+          Fri: 5,
+          Sat: 6,
+          Sun: 0,
+        };
+
+        const selectedDayNumber = dayMap[selectedDate];
+        if (selectedDayNumber === undefined) {
+          alert("Invalid day selected. Please try again.");
+          return;
+        }
+
+        // Find the next occurrence of this day
+        const today = new Date();
+        const currentDay = today.getDay();
+        let daysToAdd = selectedDayNumber - currentDay;
+        if (daysToAdd <= 0) daysToAdd += 7; // Next week if today or past
+
+        const targetDate = new Date(today);
+        targetDate.setDate(today.getDate() + daysToAdd);
+
+        // Parse the time
+        const [hour] = selectedTime.split(":").map(Number);
+        if (isNaN(hour)) {
+          alert("Invalid time selected. Please try again.");
+          return;
+        }
+
+        const startTime = new Date(
+          targetDate.getFullYear(),
+          targetDate.getMonth(),
+          targetDate.getDate(),
+          hour,
+          0,
+          0
+        ).toISOString();
+        const endTime = new Date(
+          targetDate.getFullYear(),
+          targetDate.getMonth(),
+          targetDate.getDate(),
+          hour + 1,
+          0,
+          0
+        ).toISOString();
+
+        const sessionData: SessionData = {
+          mentorId: "_id" in mentor ? mentor._id : mentor.id.toString(),
+          startTime,
+          endTime,
+          topic,
+          message: selectedCompensation
+            ? `Compensation: ${selectedCompensation}`
+            : undefined,
+        };
+
+        console.log("Creating session with data:", sessionData);
+        onConfirm(sessionData);
+        onClose();
+      } catch (error) {
+        console.error("Error creating session:", error);
+        alert("Error creating session. Please try again.");
+      }
+    } else {
+      alert("Please select a date, time, and enter a topic.");
     }
   };
 
@@ -84,6 +157,48 @@ export function SessionBookingDialog({
       "18:00",
     ];
   };
+
+  const getMentorAvailabilityForDay = (dayName: string) => {
+    if (!mentor || !("availability" in mentor) || !mentor.availability)
+      return [];
+
+    // Map abbreviated day names to day numbers (1 = Monday, 2 = Tuesday, etc.)
+    const dayMap: { [key: string]: number } = {
+      Mon: 1,
+      Tue: 2,
+      Wed: 3,
+      Thu: 4,
+      Fri: 5,
+      Sat: 6,
+      Sun: 0,
+    };
+
+    const dayNumber = dayMap[dayName];
+    if (dayNumber === undefined) return [];
+
+    // Filter availability for this specific day
+    const dayAvailability = mentor.availability.filter(
+      (slot) => slot.dayOfWeek === dayNumber && slot.isAvailable
+    );
+
+    // Return unique start times
+    return Array.from(
+      new Set(dayAvailability.map((slot) => slot.startTime))
+    ).sort();
+  };
+
+  const isTimeAvailable = (dayName: string, time: string) => {
+    const availableTimes = getMentorAvailabilityForDay(dayName);
+    return availableTimes.includes(time);
+  };
+
+  // Debug: Log available times for each day (after function is defined)
+  if (mentor && "availability" in mentor && mentor.availability) {
+    ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].forEach((day) => {
+      const availableTimes = getMentorAvailabilityForDay(day);
+      console.log(`${day} available times:`, availableTimes);
+    });
+  }
 
   return (
     <AnimatePresence>
@@ -129,14 +244,14 @@ export function SessionBookingDialog({
               variant="ghost"
               size="sm"
               onClick={onClose}
-              className="absolute top-4 right-4 h-12 w-12 p-0 z-20 transition-all duration-200 rounded-full hover:scale-110"
+              className="absolute z-20 w-12 h-12 p-0 transition-all duration-200 rounded-full top-4 right-4 hover:scale-110"
               style={{
                 color: colors.text.primary,
                 backgroundColor: colors.background.tertiary,
                 borderColor: colors.border.primary,
               }}
             >
-              <X className="h-6 w-6" />
+              <X className="w-6 h-6" />
             </Button>
 
             <div className="p-8">
@@ -147,23 +262,31 @@ export function SessionBookingDialog({
                 }`}
               >
                 {/* Left side - Profile Picture with Enhanced Styling and Animations */}
-                <div className="w-52 flex-shrink-0">
+                <div className="flex-shrink-0 w-52">
                   <motion.div
                     className="relative"
                     whileHover={{ scale: 1.02 }}
                     transition={{ duration: 0.3 }}
                   >
                     <div
-                      className="w-full h-72 border-4 rounded-2xl overflow-hidden shadow-2xl transition-all duration-200"
+                      className="w-full overflow-hidden transition-all duration-200 border-4 shadow-2xl h-72 rounded-2xl"
                       style={{
                         backgroundColor: colors.background.tertiary,
                         borderColor: colors.border.primary,
                       }}
                     >
                       <ImageWithFallback
-                        src={mentor.image}
-                        alt={mentor.name}
-                        className="w-full h-full object-cover"
+                        src={
+                          "userId" in mentor
+                            ? mentor.userId.avatar
+                            : mentor.image
+                        }
+                        alt={
+                          "userId" in mentor
+                            ? `${mentor.userId.firstName} ${mentor.userId.lastName}`
+                            : mentor.name
+                        }
+                        className="object-cover w-full h-full"
                       />
                     </div>
                   </motion.div>
@@ -183,7 +306,9 @@ export function SessionBookingDialog({
                           : "text-transparent bg-gradient-to-r from-gray-900 via-gray-800 to-gray-700"
                       }`}
                     >
-                      {mentor.name}
+                      {"userId" in mentor
+                        ? `${mentor.userId.firstName} ${mentor.userId.lastName}`
+                        : mentor.name}
                     </motion.h2>
                     <motion.p
                       initial={{ opacity: 0, x: -20 }}
@@ -193,7 +318,7 @@ export function SessionBookingDialog({
                         isDarkMode ? "text-gray-300" : "text-gray-600"
                       }`}
                     >
-                      {mentor.role} at {mentor.company}
+                      {mentor.userId.title}
                     </motion.p>
                   </div>
 
@@ -212,13 +337,13 @@ export function SessionBookingDialog({
                         className="text-2xl font-bold transition-colors duration-200"
                         style={{ color: colors.text.primary }}
                       >
-                        {mentor.rating}
+                        {mentor.rating.toFixed(1)}
                       </span>
                       <span
                         className="transition-colors duration-200"
                         style={{ color: colors.text.secondary }}
                       >
-                        ({mentor.sessions} sessions)
+                        ({mentor.totalSessions} sessions)
                       </span>
                     </div>
                   </motion.div>
@@ -238,8 +363,8 @@ export function SessionBookingDialog({
                       Expertise
                     </h3>
                     <div className="flex flex-wrap gap-2">
-                      {mentor.expertise &&
-                        mentor.expertise.map((skill, index) => (
+                      {mentor.specialties &&
+                        mentor.specialties.map((skill, index) => (
                           <motion.span
                             key={index}
                             initial={{ opacity: 0, scale: 0.8 }}
@@ -269,7 +394,7 @@ export function SessionBookingDialog({
                     transition={{ duration: 0.6, delay: 0.7 }}
                   >
                     <h3
-                      className="text-lg font-semibold mb-3 transition-colors duration-200"
+                      className="mb-3 text-lg font-semibold transition-colors duration-200"
                       style={{ color: colors.text.primary }}
                     >
                       About
@@ -278,7 +403,7 @@ export function SessionBookingDialog({
                       className="leading-relaxed transition-colors duration-200"
                       style={{ color: colors.text.secondary }}
                     >
-                      {mentor.about}
+                      {mentor.userId.bio}
                     </p>
                   </motion.div>
                 </div>
@@ -292,7 +417,7 @@ export function SessionBookingDialog({
                 transition={{ duration: 0.6, delay: 0.8 }}
               >
                 <h4
-                  className="text-xl font-semibold mb-4 transition-colors duration-200"
+                  className="mb-4 text-xl font-semibold transition-colors duration-200"
                   style={{ color: colors.text.primary }}
                 >
                   Select Available Time
@@ -333,9 +458,8 @@ export function SessionBookingDialog({
                           {getAvailableTimes()
                             .slice(0, 8)
                             .map((time, timeIndex) => {
-                              // Create consistent availability based on day and time indices
-                              const isAvailable =
-                                (dayIndex + timeIndex) % 3 !== 0; // More consistent pattern
+                              // Use mentor's actual availability
+                              const isAvailable = isTimeAvailable(day, time);
                               const isSelected =
                                 selectedDate === day && selectedTime === time;
 
@@ -395,7 +519,7 @@ export function SessionBookingDialog({
                 transition={{ duration: 0.6, delay: 1.2 }}
               >
                 <h4
-                  className="text-xl font-semibold mb-4 transition-colors duration-200"
+                  className="mb-4 text-xl font-semibold transition-colors duration-200"
                   style={{ color: colors.text.primary }}
                 >
                   Session Topic
@@ -404,7 +528,7 @@ export function SessionBookingDialog({
                   value={topic}
                   onChange={(e) => setTopic(e.target.value)}
                   placeholder="What would you like to discuss in this session?"
-                  className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
+                  className="w-full p-3 transition-all duration-200 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   style={{
                     backgroundColor: colors.background.primary,
                     borderColor: colors.border.primary,
@@ -422,12 +546,12 @@ export function SessionBookingDialog({
                 transition={{ duration: 0.6, delay: 1.4 }}
               >
                 <h4
-                  className="text-xl font-semibold mb-4 transition-colors duration-200"
+                  className="mb-4 text-xl font-semibold transition-colors duration-200"
                   style={{ color: colors.text.primary }}
                 >
                   What would you like to offer the mentor?
                 </h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                   {[
                     {
                       key: "ice-cream",
@@ -458,7 +582,7 @@ export function SessionBookingDialog({
                       transition={{ duration: 0.5, delay: 1.6 + index * 0.1 }}
                       whileHover={{ scale: 1.03, y: -5 }}
                       onClick={() => setSelectedCompensation(option.key)}
-                      className="p-4 border-2 rounded-lg transition-all duration-200 cursor-pointer hover:shadow-xl"
+                      className="p-4 transition-all duration-200 border-2 rounded-lg cursor-pointer hover:shadow-xl"
                       style={{
                         backgroundColor:
                           selectedCompensation === option.key
@@ -472,7 +596,7 @@ export function SessionBookingDialog({
                     >
                       <div className="flex items-center space-x-3">
                         <div
-                          className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200"
+                          className="flex items-center justify-center w-12 h-12 transition-all duration-200 rounded-full"
                           style={{
                             backgroundColor:
                               selectedCompensation === option.key
@@ -529,7 +653,7 @@ export function SessionBookingDialog({
                     !topic ||
                     !selectedCompensation
                   }
-                  className="px-8 py-4 text-xl font-semibold text-white rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95"
+                  className="px-8 py-4 text-xl font-semibold text-white transition-all duration-200 transform shadow-lg rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-xl hover:scale-105 active:scale-95"
                   style={{
                     backgroundColor: colors.accent.primary,
                   }}

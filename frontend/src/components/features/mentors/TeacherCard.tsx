@@ -46,8 +46,8 @@ export function TeacherCard({
             <div className="relative mx-auto">
               <Avatar className="w-16 h-16 mx-auto ring-2 ring-offset-2 ring-[#08CB00]/20">
                 <ImageWithFallback
-                  src={mentor.image}
-                  alt={mentor.name}
+                                                                  src={mentor.image}
+                        alt={mentor.name}
                   className="object-cover"
                 />
                 <AvatarFallback

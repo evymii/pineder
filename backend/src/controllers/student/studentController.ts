@@ -1,180 +1,145 @@
-import { Request, Response } from "express";
-import Student from "../../models/Student";
-import User from "../../models/User";
-import Session from "../../models/Session";
+import { Request, Response } from 'express';
+import Student from '../../models/Student';
+import User from '../../models/User';
+import { logger } from '../../utils/logger';
+import { sendSuccess, sendError } from '../../utils/helpers';
+import { AuthRequest } from '../../middleware/auth';
 
-// Get all students with basic filtering
-export const getAllStudents = async (req: Request, res: Response) => {
+/**
+ * Create student profile
+ * POST /api/students
+ */
+export const createStudentProfile = async (req: AuthRequest, res: Response) => {
   try {
-    const { page = 1, limit = 10, grade, subject } = req.query;
-    const skip = (Number(page) - 1) * Number(limit);
-
-    const filter: any = {};
-    if (grade) filter.grade = grade;
-    if (subject) filter.subjects = { $in: [subject] };
-
-    const students = await Student.find(filter)
-      .populate("userId", "firstName lastName email avatar")
-      .skip(skip)
-      .limit(Number(limit))
-      .sort({ createdAt: -1 });
-
-    const total = await Student.countDocuments(filter);
-
-    res.json({
-      success: true,
-      data: students,
-      total,
-      page: Number(page),
-      limit: Number(limit),
-      totalPages: Math.ceil(total / Number(limit)),
-    });
-  } catch (error) {
-    console.error("Error fetching students:", error);
-    res.status(500).json({
-      success: false,
-      error: "Failed to fetch students",
-    });
-  }
-};
-
-// Get student by ID
-export const getStudentById = async (req: Request, res: Response) => {
-  try {
-    const student = await Student.findById(req.params.id).populate(
-      "userId",
-      "firstName lastName email avatar bio"
-    );
-
-    if (!student) {
-      return res.status(404).json({
-        success: false,
-        error: "Student not found",
-      });
+    const { user } = req;
+    
+    if (!user) {
+      return sendError(res, 'User not authenticated', 401);
     }
 
-    res.json({
-      success: true,
-      data: student,
-    });
-  } catch (error) {
-    console.error("Error fetching student:", error);
-    res.status(500).json({
-      success: false,
-      error: "Failed to fetch student",
-    });
-  }
-};
+    if (user.role !== 'student') {
+      return sendError(res, 'Only students can create student profiles', 403);
+    }
 
-// Create new student profile
-export const createStudent = async (req: Request, res: Response) => {
-  try {
-    const studentData = req.body;
+    // Check if student profile already exists
+    const existingStudent = await Student.findOne({ userId: user.id });
+    if (existingStudent) {
+      return sendError(res, 'Student profile already exists', 409);
+    }
+
+    // Create student profile
+    const studentData = {
+      userId: user.id,
+      grade: req.body.grade,
+      subjects: req.body.subjects || [],
+      goals: req.body.goals || [],
+      learningStyle: req.body.learningStyle || 'mixed',
+      timezone: req.body.timezone || 'UTC',
+      parentEmail: req.body.parentEmail,
+      totalSessions: 0,
+      totalHours: 0,
+      averageRating: 0
+    };
+
     const student = await Student.create(studentData);
 
-    const populatedStudent = await Student.findById(student._id).populate(
-      "userId",
-      "firstName lastName email"
+    // Update user profile as completed
+    await User.findByIdAndUpdate(user.id, { profileCompleted: true });
+
+    logger.info('Student profile created', { userId: user.id, studentId: student._id });
+
+    return sendSuccess(res, student, 'Student profile created successfully');
+  } catch (error) {
+    logger.error('Create student profile failed', { error });
+    return sendError(res, 'Failed to create student profile', 500);
+  }
+};
+
+/**
+ * Get student profile
+ * GET /api/students/profile
+ */
+export const getStudentProfile = async (req: AuthRequest, res: Response) => {
+  try {
+    const { user } = req;
+    
+    if (!user) {
+      return sendError(res, 'User not authenticated', 401);
+    }
+
+    const student = await Student.findOne({ userId: user.id }).populate('userId');
+    
+    if (!student) {
+      return sendError(res, 'Student profile not found', 404);
+    }
+
+    return sendSuccess(res, student, 'Student profile retrieved successfully');
+  } catch (error) {
+    logger.error('Get student profile failed', { error });
+    return sendError(res, 'Failed to get student profile', 500);
+  }
+};
+
+/**
+ * Update student profile
+ * PUT /api/students/profile
+ */
+export const updateStudentProfile = async (req: AuthRequest, res: Response) => {
+  try {
+    const { user } = req;
+    
+    if (!user) {
+      return sendError(res, 'User not authenticated', 401);
+    }
+
+    const student = await Student.findOneAndUpdate(
+      { userId: user.id },
+      req.body,
+      { new: true, runValidators: true }
     );
 
-    res.status(201).json({
-      success: true,
-      data: populatedStudent,
-      message: "Student profile created successfully",
-    });
-  } catch (error) {
-    console.error("Error creating student:", error);
-    res.status(500).json({
-      success: false,
-      error: "Failed to create student profile",
-    });
-  }
-};
-
-// Update student profile
-export const updateStudent = async (req: Request, res: Response) => {
-  try {
-    const student = await Student.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true,
-    }).populate("userId", "firstName lastName email");
-
     if (!student) {
-      return res.status(404).json({
-        success: false,
-        error: "Student not found",
-      });
+      return sendError(res, 'Student profile not found', 404);
     }
 
-    res.json({
-      success: true,
-      data: student,
-      message: "Student profile updated successfully",
-    });
+    logger.info('Student profile updated', { userId: user.id });
+
+    return sendSuccess(res, student, 'Student profile updated successfully');
   } catch (error) {
-    console.error("Error updating student:", error);
-    res.status(500).json({
-      success: false,
-      error: "Failed to update student profile",
-    });
+    logger.error('Update student profile failed', { error });
+    return sendError(res, 'Failed to update student profile', 500);
   }
 };
 
-// Delete student profile
-export const deleteStudent = async (req: Request, res: Response) => {
+/**
+ * Get student by ID (public profile)
+ * GET /api/students/:id
+ */
+export const getStudentById = async (req: Request, res: Response) => {
   try {
-    const student = await Student.findByIdAndDelete(req.params.id);
-
+    const { id } = req.params;
+    
+    const student = await Student.findById(id).populate('userId', 'firstName lastName email avatar bio location');
+    
     if (!student) {
-      return res.status(404).json({
-        success: false,
-        error: "Student not found",
-      });
+      return sendError(res, 'Student not found', 404);
     }
 
-    res.json({
-      success: true,
-      message: "Student profile deleted successfully",
-    });
+    // Return public profile data only
+    const publicProfile = {
+      _id: student._id,
+      user: student.userId,
+      grade: student.grade,
+      subjects: student.subjects,
+      totalSessions: student.totalSessions,
+      totalHours: (student as any).totalHours || 0,
+      averageRating: student.averageRating,
+      createdAt: student.createdAt
+    };
+
+    return sendSuccess(res, publicProfile, 'Student profile retrieved successfully');
   } catch (error) {
-    console.error("Error deleting student:", error);
-    res.status(500).json({
-      success: false,
-      error: "Failed to delete student profile",
-    });
-  }
-};
-
-// Get student's sessions
-export const getStudentSessions = async (req: Request, res: Response) => {
-  try {
-    const { page = 1, limit = 10, status } = req.query;
-    const skip = (Number(page) - 1) * Number(limit);
-
-    const filter: any = { studentId: req.params.id };
-    if (status) filter.status = status;
-
-    const sessions = await Session.find(filter)
-      .populate("mentorId", "firstName lastName")
-      .skip(skip)
-      .limit(Number(limit))
-      .sort({ startTime: -1 });
-
-    const total = await Session.countDocuments(filter);
-
-    res.json({
-      success: true,
-      data: sessions,
-      total,
-      page: Number(page),
-      limit: Number(limit),
-      totalPages: Math.ceil(total / Number(limit)),
-    });
-  } catch (error) {
-    console.error("Error fetching student sessions:", error);
-    res.status(500).json({
-      success: false,
-      error: "Failed to fetch student sessions",
-    });
+    logger.error('Get student by ID failed', { error });
+    return sendError(res, 'Failed to get student profile', 500);
   }
 };

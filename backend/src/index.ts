@@ -1,21 +1,42 @@
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
 import { connectDB } from "./config/database";
+import { logger } from "./utils/logger";
+import dotenv from "dotenv";
+import {
+  securityHeaders,
+  rateLimiter,
+  errorHandler,
+  requestLogger,
+  notFoundHandler,
+} from "./middleware/security";
 import userRoutes from "./routes/users";
 import sessionRoutes from "./routes/sessions";
 import mentorRoutes from "./routes/mentors";
 import studentRoutes from "./routes/students";
-import communityRoutes from "./routes/communities";
 import groupSessionRoutes from "./routes/groupSessions";
-import paymentRoutes from "./routes/payments";
-import teacherAvailabilityRoutes from "./routes/teacherAvailability";
+import eventRoutes from "./routes/events";
+import ratingRoutes from "./routes/ratings";
+import rescheduleRoutes from "./routes/reschedule";
+import topicRoutes from "./routes/topics";
+import mentorDashboardRoutes from "./routes/mentorDashboard";
+import studentProfileRoutes from "./routes/studentProfile";
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5555;
 
+// Security middleware
+app.use(securityHeaders);
+app.use(rateLimiter);
+
+// Request logging
+if (process.env.NODE_ENV !== "test") {
+  app.use(requestLogger);
+}
+
+// CORS configuration
 app.use(
   cors({
     origin:
@@ -34,23 +55,72 @@ app.use(
     ],
   })
 );
-app.use(express.json());
+
+// Body parsing middleware
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 app.use("/api/users", userRoutes);
 app.use("/api/sessions", sessionRoutes);
 app.use("/api/mentors", mentorRoutes);
 app.use("/api/students", studentRoutes);
-app.use("/api/communities", communityRoutes);
 app.use("/api/group-sessions", groupSessionRoutes);
-app.use("/api/payments", paymentRoutes);
-app.use("/api/teacher-availability", teacherAvailabilityRoutes);
+app.use("/api/events", eventRoutes);
+app.use("/api/ratings", ratingRoutes);
+app.use("/api/reschedule", rescheduleRoutes);
+app.use("/api/topics", topicRoutes);
+app.use("/api/mentor-dashboard", mentorDashboardRoutes);
+app.use("/api/student-profile", studentProfileRoutes);
 
-app.get("/", (req, res) => {
-  res.json({ message: "Backend API is running with MVC architecture!" });
+// Health check endpoint
+app.get("/health", (req, res) => {
+  res.json({
+    status: "OK",
+    message: "Backend API is running successfully!",
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || "development",
+    version: "1.0.0",
+    database: "Connected",
+  });
 });
 
-app.get("/health", (req, res) => {
-  res.json({ status: "OK", message: "Server is running" });
+// API status endpoint
+app.get("/api/status", (req, res) => {
+  res.json({
+    status: "OK",
+    message: "API is ready for frontend connection",
+    endpoints: {
+      users: "/api/users",
+      sessions: "/api/sessions",
+      mentors: "/api/mentors",
+      students: "/api/students",
+      events: "/api/events",
+      ratings: "/api/ratings",
+      topics: "/api/topics",
+      reschedule: "/api/reschedule",
+    },
+  });
+});
+
+// Root endpoint
+app.get("/", (req, res) => {
+  res.json({
+    message: "Backend API is running with MVC architecture!",
+    version: "1.0.0",
+    endpoints: {
+      users: "/api/users",
+      sessions: "/api/sessions",
+      mentors: "/api/mentors",
+      students: "/api/students",
+      communities: "/api/communities",
+      groupSessions: "/api/group-sessions",
+      payments: "/api/payments",
+      teacherAvailability: "/api/teacher-availability",
+      events: "/api/events",
+      ratings: "/api/ratings",
+      studentProfile: "/api/student-profile",
+    },
+  });
 });
 
 // Test auth endpoint
@@ -74,17 +144,25 @@ app.get("/api/test-auth", (req, res) => {
   });
 });
 
+// 404 handler - must be after all routes
+app.use(notFoundHandler);
+
+// Global error handler - must be last
+app.use(errorHandler);
 
 const startServer = async () => {
   try {
     await connectDB();
 
     app.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`📱 Environment: ${process.env.NODE_ENV || "development"}`);
+      logger.info(`Server started successfully`, {
+        port: PORT,
+        environment: process.env.NODE_ENV || "development",
+      });
     });
   } catch (error) {
-    console.error("Failed to start server:", error);
+    logger.error("Failed to start server", { error });
+    process.exit(1);
   }
 };
 

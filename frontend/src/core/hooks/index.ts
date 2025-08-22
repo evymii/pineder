@@ -12,3 +12,4 @@ export { useMentors } from "./mentors/useMentors";
 
 // Session hooks
 export { useSessions } from "./sessions/useSessions";
+export { useSessionDeletion } from "./useSessionDeletion";

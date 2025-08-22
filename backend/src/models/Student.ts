@@ -5,11 +5,8 @@ export interface IStudent extends Document {
   grade: string;
   subjects: string[];
   goals: string[];
-  learningStyle: string;
-  timezone: string;
-  parentEmail?: string;
   totalSessions: number;
-  totalHours: number;
+  totalMentors: number;
   averageRating: number;
   createdAt: Date;
   updatedAt: Date;
@@ -26,11 +23,13 @@ const studentSchema = new Schema<IStudent>(
     grade: {
       type: String,
       required: true,
+      enum: ["Beginner", "Intermediate", "Advanced"],
+      default: "Beginner",
     },
     subjects: [
       {
         type: String,
-        required: true,
+        required: false,
       },
     ],
     goals: [
@@ -39,26 +38,15 @@ const studentSchema = new Schema<IStudent>(
         maxlength: 200,
       },
     ],
-    learningStyle: {
-      type: String,
-      enum: ["visual", "auditory", "kinesthetic", "reading", "mixed"],
-      default: "mixed",
-    },
-    timezone: {
-      type: String,
-      default: "UTC",
-    },
-    parentEmail: {
-      type: String,
-      required: false,
-    },
     totalSessions: {
       type: Number,
       default: 0,
+      min: 0,
     },
-    totalHours: {
+    totalMentors: {
       type: Number,
       default: 0,
+      min: 0,
     },
     averageRating: {
       type: Number,

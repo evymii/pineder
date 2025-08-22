@@ -54,10 +54,18 @@ const UserSidebar: React.FC<UserSidebarProps> = ({ isOpen, onClose, user }) => {
   });
 
   const handleEditProfile = () => {
+    console.log("Edit profile clicked, user role:", user.role);
+    console.log("User object:", user);
+    
     // Route to appropriate profile page based on user role
     if (user.role === "mentor") {
+      console.log("Redirecting to mentor profile");
       router.push("/profile/mentor");
     } else if (user.role === "student") {
+      console.log("Redirecting to student profile");
+      router.push("/profile/student");
+    } else {
+      console.log("Unknown role, defaulting to student profile");
       router.push("/profile/student");
     }
     onClose(); // Close sidebar after navigation
